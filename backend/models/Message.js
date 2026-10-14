@@ -24,7 +24,11 @@ const messageSchema = new mongoose.Schema({
             brokenLinks: Number,
             consoleErrors: Number,
             accessibilityIssues: Number,
-            networkIssues: Number
+            networkIssues: Number,
+            securityIssues: Number,
+            uiIssues: Number,
+            formIssues: Number,
+            pagesCrawled: Number
         },
         comparison: {
             previousReportId: mongoose.Schema.Types.ObjectId,

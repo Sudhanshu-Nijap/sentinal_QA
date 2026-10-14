@@ -193,7 +193,12 @@ async function runMasterOrchestrator(data) {
             const reportSummary = {
                 healthScore,
                 status: 'completed',
-                lighthouseScores: finalReport?.lighthouseScores || {},
+                lighthouseScores: {
+                    performance: finalReport?.lighthouseScores?.performance ?? scanData?.lighthouseScores?.performance ?? 0,
+                    accessibility: finalReport?.lighthouseScores?.accessibility ?? scanData?.lighthouseScores?.accessibility ?? 0,
+                    bestPractices: finalReport?.lighthouseScores?.bestPractices ?? scanData?.lighthouseScores?.bestPractices ?? 0,
+                    seo: finalReport?.lighthouseScores?.seo ?? scanData?.lighthouseScores?.seo ?? 0
+                },
                 stats: {
                     brokenLinks: finalReport?.brokenLinks?.length || 0,
                     consoleErrors: finalReport?.consoleErrors?.length || 0,

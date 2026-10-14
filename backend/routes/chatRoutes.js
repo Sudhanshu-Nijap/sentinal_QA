@@ -64,7 +64,44 @@ router.get('/thread/:chatId/messages', async (req, res) => {
     try {
         const messages = await Message.find({ chatId: req.params.chatId })
             .sort({ createdAt: 1 }).lean();
-        res.json(messages);
+
+        // High-fidelity fallback: enrich report/rescan messages with exact ScanReport data if missing stats/scores
+        const enriched = await Promise.all(messages.map(async (msg) => {
+            if ((msg.type === 'report' || msg.type === 'rescan') && msg.scanReportId) {
+                const needsStats = msg.reportSummary?.stats?.uiIssues === undefined || msg.reportSummary?.stats?.formIssues === undefined;
+                const needsLh = !msg.reportSummary?.lighthouseScores?.performance && !msg.reportSummary?.lighthouseScores?.seo;
+                if (needsStats || needsLh) {
+                    try {
+                        const report = await ScanReport.findById(msg.scanReportId).lean();
+                        if (report) {
+                            msg.reportSummary = {
+                                ...msg.reportSummary,
+                                healthScore: report.healthScore ?? msg.reportSummary?.healthScore ?? 100,
+                                lighthouseScores: {
+                                    performance: report.lighthouseScores?.performance ?? msg.reportSummary?.lighthouseScores?.performance ?? 0,
+                                    accessibility: report.lighthouseScores?.accessibility ?? msg.reportSummary?.lighthouseScores?.accessibility ?? 0,
+                                    bestPractices: report.lighthouseScores?.bestPractices ?? msg.reportSummary?.lighthouseScores?.bestPractices ?? 0,
+                                    seo: report.lighthouseScores?.seo ?? msg.reportSummary?.lighthouseScores?.seo ?? 0
+                                },
+                                stats: {
+                                    brokenLinks: report.brokenLinks?.length || 0,
+                                    consoleErrors: report.consoleErrors?.length || 0,
+                                    accessibilityIssues: report.accessibilityIssues?.length || 0,
+                                    networkIssues: report.networkLogs?.length || 0,
+                                    securityIssues: report.securityIssues?.length || 0,
+                                    uiIssues: (report.uiIssues?.length || 0) + (report.responsiveIssues?.length || 0),
+                                    formIssues: report.formIssues?.length || 0,
+                                    pagesCrawled: report.pagesCrawled || 1
+                                }
+                            };
+                        }
+                    } catch (_) {}
+                }
+            }
+            return msg;
+        }));
+
+        res.json(enriched);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -77,7 +114,39 @@ router.get('/thread/:chatId/scans', async (req, res) => {
             chatId: req.params.chatId,
             type: { $in: ['report', 'rescan'] }
         }).sort({ createdAt: -1 }).lean();
-        res.json(messages);
+
+        const enriched = await Promise.all(messages.map(async (msg) => {
+            if (msg.scanReportId && (!msg.reportSummary?.stats?.uiIssues || !msg.reportSummary?.lighthouseScores?.performance)) {
+                try {
+                    const report = await ScanReport.findById(msg.scanReportId).lean();
+                    if (report) {
+                        msg.reportSummary = {
+                            ...msg.reportSummary,
+                            healthScore: report.healthScore ?? msg.reportSummary?.healthScore ?? 100,
+                            lighthouseScores: {
+                                performance: report.lighthouseScores?.performance ?? 0,
+                                accessibility: report.lighthouseScores?.accessibility ?? 0,
+                                bestPractices: report.lighthouseScores?.bestPractices ?? 0,
+                                seo: report.lighthouseScores?.seo ?? 0
+                            },
+                            stats: {
+                                brokenLinks: report.brokenLinks?.length || 0,
+                                consoleErrors: report.consoleErrors?.length || 0,
+                                accessibilityIssues: report.accessibilityIssues?.length || 0,
+                                networkIssues: report.networkLogs?.length || 0,
+                                securityIssues: report.securityIssues?.length || 0,
+                                uiIssues: (report.uiIssues?.length || 0) + (report.responsiveIssues?.length || 0),
+                                formIssues: report.formIssues?.length || 0,
+                                pagesCrawled: report.pagesCrawled || 1
+                            }
+                        };
+                    }
+                } catch (_) {}
+            }
+            return msg;
+        }));
+
+        res.json(enriched);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

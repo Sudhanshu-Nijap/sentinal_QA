@@ -18,20 +18,20 @@ import { API_URL, SOCKET_URL } from '../config/api';
 // ── Date Separator ─────────────────────────────────────────────────────────────
 const DateSeparator = ({ date }) => (
   <div className="flex items-center gap-3 my-4">
-    <div className="flex-1 h-px bg-white/5" />
-    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-600 px-2 py-1 bg-[var(--eu-bg-void)] rounded-full border border-white/5">
+    <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
+    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 px-3 py-1 bg-white dark:bg-slate-800 rounded-full border border-slate-200 dark:border-slate-700 shadow-xs">
       {date}
     </span>
-    <div className="flex-1 h-px bg-white/5" />
+    <div className="flex-1 h-px bg-slate-200 dark:bg-slate-800" />
   </div>
 );
 
 // ── System Pill ────────────────────────────────────────────────────────────────
 const SystemMessage = ({ content }) => (
   <div className="flex justify-center my-2">
-    <div className="px-3 py-1 bg-white/5 border border-white/5 rounded-full flex items-center gap-2">
-      <Activity size={9} className="text-eu-accent" />
-      <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">{content}</span>
+    <div className="px-3 py-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full flex items-center gap-2 shadow-xs">
+      <Activity size={10} className="text-indigo-600 dark:text-indigo-400" />
+      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 font-outfit">{content}</span>
     </div>
   </div>
 );
@@ -78,11 +78,11 @@ const PreviousScansDropdown = ({ chatId, onSelect }) => {
     <div className="relative">
       <button
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--eu-bg-void)] hover:bg-white/5 border border-[var(--eu-glass-border)] rounded-lg text-[9px] font-black uppercase tracking-widest text-[var(--eu-text-main)] opacity-70 transition-all"
+        className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 transition-all shadow-xs"
       >
-        <Activity size={10} />
+        <Activity size={12} className="text-indigo-600 dark:text-indigo-400" />
         History
-        <ChevronDown size={10} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown size={11} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       <AnimatePresence>
         {open && (
@@ -92,27 +92,27 @@ const PreviousScansDropdown = ({ chatId, onSelect }) => {
               initial={{ opacity: 0, y: -8, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -8, scale: 0.95 }}
-              className="absolute right-0 top-full mt-2 z-50 w-64 glass-euphoria border border-[var(--eu-glass-border)] rounded-2xl overflow-hidden shadow-2xl"
+              className="absolute right-0 top-full mt-2 z-50 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xl"
             >
-              <div className="p-2 border-b border-white/5">
-                <p className="text-[8px] font-black uppercase tracking-widest text-slate-500 px-2">Previous Scans</p>
+              <div className="p-3 border-b border-slate-200 dark:border-slate-800">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 font-outfit">Previous Scans</p>
               </div>
               {scans.length === 0 ? (
-                <div className="p-4 text-center text-[9px] text-slate-600">No previous scans</div>
+                <div className="p-4 text-center text-xs text-slate-500 font-medium">No previous scans recorded</div>
               ) : (
                 <div className="max-h-60 overflow-y-auto">
                   {scans.map((s, i) => (
                     <button
                       key={s._id}
                       onClick={() => { onSelect(s.scanReportId); setOpen(false); }}
-                      className="w-full flex items-center gap-3 p-3 hover:bg-white/5 transition-all text-left"
+                      className="w-full flex items-center gap-3 p-3 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-all text-left border-b border-slate-100 dark:border-slate-800/60 last:border-0"
                     >
-                      <div className={`size-2 rounded-full shrink-0 ${s.type === 'rescan' ? 'bg-eu-accent' : 'bg-green-400'}`} />
+                      <div className={`size-2 rounded-full shrink-0 ${s.type === 'rescan' ? 'bg-indigo-600' : 'bg-emerald-500'}`} />
                       <div className="flex-1 min-w-0">
-                        <p className="text-[9px] font-black text-[var(--eu-text-main)] truncate">
+                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate font-outfit">
                           {s.type === 'rescan' ? 'Rescan' : 'Initial Scan'} #{scans.length - i}
                         </p>
-                        <p className="text-[8px] text-slate-500 font-mono">
+                        <p className="text-[10px] text-slate-500 font-mono">
                           {new Date(s.createdAt).toLocaleString('en-US', {
                             month: 'short', day: 'numeric',
                             hour: '2-digit', minute: '2-digit'
@@ -120,7 +120,9 @@ const PreviousScansDropdown = ({ chatId, onSelect }) => {
                         </p>
                       </div>
                       {s.reportSummary?.healthScore !== undefined && (
-                        <span className="text-[9px] font-black text-eu-accent">{s.reportSummary.healthScore}</span>
+                        <span className="text-xs font-bold font-mono text-indigo-600 dark:text-indigo-400">
+                          {s.reportSummary.healthScore}%
+                        </span>
                       )}
                     </button>
                   ))}
@@ -605,16 +607,16 @@ const ChatInterface = ({
                 <button
                   onClick={handleRescan}
                   disabled={isScanning}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-eu-accent/10 hover:bg-eu-accent border border-eu-accent/30 rounded-lg text-[9px] font-black uppercase tracking-widest text-eu-accent hover:text-white transition-all disabled:opacity-40"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800 rounded-lg text-xs font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300 transition-all disabled:opacity-40 shadow-xs"
                 >
-                  <RefreshCw size={9} className={isScanning ? 'animate-spin' : ''} />
+                  <RefreshCw size={11} className={isScanning ? 'animate-spin' : ''} />
                   Rescan
                 </button>
               </>
             )}
             {activeView === 'qa' && (
               <button onClick={onResetTarget}
-                className="px-3 py-1.5 bg-[var(--eu-bg-void)] hover:bg-white/5 border border-[var(--eu-glass-border)] rounded-lg text-[9px] font-black uppercase tracking-widest text-[var(--eu-text-main)] opacity-70 transition-all">
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 transition-all shadow-xs">
                 Reset
               </button>
             )}
@@ -651,7 +653,7 @@ const ChatInterface = ({
 
 
       {/* ── Messages / Dashboard Views ── */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1 custom-scrollbar bg-[var(--eu-bg-void)]">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-4 custom-scrollbar bg-slate-50/50 dark:bg-slate-950">
         {activeView === 'schedule' ? (
           <SchedulingDashboard setAlert={setAlert} confirm={confirm} />
         ) : activeView === 'analyze' ? (
@@ -664,7 +666,7 @@ const ChatInterface = ({
           </div>
         ) : loading ? (
           <div className="flex items-center justify-center h-full">
-            <Loader2 className="animate-spin text-eu-accent" size={24} />
+            <Loader2 className="animate-spin text-indigo-600 dark:text-indigo-400" size={24} />
           </div>
         ) : messages.length === 0 && !activeChatId ? (
           <WelcomeHero />
@@ -685,11 +687,12 @@ const ChatInterface = ({
               if (msg.type === 'report' || msg.type === 'rescan') {
                 return (
                   <motion.div key={msg._id || i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                    className="flex justify-start">
-                    <div className="flex flex-col gap-1 max-w-[90%]">
-                      <div className="flex items-center gap-1.5 px-1">
-                        <Bot size={10} className="text-eu-accent" />
-                        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-eu-accent opacity-70">Sentinel AI</span>
+                    className="flex justify-start my-3">
+                    <div className="flex flex-col gap-1.5 max-w-md w-full">
+                      <div className="flex items-center gap-2 px-1">
+                        <Bot size={13} className="text-indigo-600 dark:text-indigo-400" />
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 font-outfit">Sentinel QA Assistant</span>
+                        <span className="text-[10px] text-slate-400 font-mono">{time}</span>
                       </div>
                       <ScanSummaryCard
                         message={msg}
@@ -702,31 +705,40 @@ const ChatInterface = ({
               }
 
               const isUser = msg.type === 'user';
+              const isHazard = msg.content?.includes('SECURITY HAZARD') || msg.content?.includes('🚨');
+
               return (
                 <motion.div key={msg._id || i} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-                  className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+                  className={`flex ${isUser ? 'justify-end' : 'justify-start'} my-2`}>
                   <div className={`flex flex-col gap-1 max-w-[85%] ${isUser ? 'items-end' : 'items-start'}`}>
                     <div className="flex items-center gap-1.5 px-1">
-                      {!isUser && ((msg.content.includes('🚨') || msg.content.includes('SECURITY HAZARD')) ? <Shield size={10} className="text-primary animate-pulse" /> : <Bot size={10} className="text-[var(--eu-text-main)] opacity-40" />)}
-                      <span className={`text-[8px] font-black uppercase tracking-[0.2em] ${!isUser && (msg.content.includes('🚨') || msg.content.includes('SECURITY HAZARD')) ? 'text-primary' : 'text-[var(--eu-text-main)] opacity-30'}`}>
-                        {isUser ? 'You' : 'Sentinel AI'}
-                      </span>
-                      <span className="text-[8px] text-slate-600 font-mono">{time}</span>
-                      {isUser && <User size={10} className="text-[var(--eu-text-main)] opacity-40" />}
-                    </div>
-                    <div className={`px-4 py-3 rounded-[18px] border text-[11px] leading-relaxed transition-all duration-500
-                      ${isUser
-                        ? 'bg-[var(--eu-bg-card)] rounded-tr-sm border-primary/20 text-[var(--eu-text-main)] opacity-90'
-                        : (msg.content.includes('🚨') || msg.content.includes('SECURITY HAZARD'))
-                          ? 'bg-primary/5 border-primary/40 rounded-tl-sm text-[var(--eu-text-main)] shadow-[0_0_20px_rgba(239,68,68,0.1)]'
-                          : 'bg-[var(--eu-bg-card)] border-[var(--eu-glass-border)] rounded-tl-sm text-[var(--eu-text-main)] opacity-90'
+                      {!isUser && (
+                        isHazard
+                          ? <Shield size={12} className="text-rose-600 animate-pulse" />
+                          : <Bot size={12} className="text-indigo-600 dark:text-indigo-400" />
+                      )}
+                      <span className={`text-[10px] font-bold uppercase tracking-wider font-outfit ${
+                        isHazard ? 'text-rose-600 dark:text-rose-400' : 'text-slate-500'
                       }`}>
+                        {isUser ? 'You' : 'Sentinel QA'}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono">{time}</span>
+                      {isUser && <User size={12} className="text-slate-400" />}
+                    </div>
+
+                    <div className={`px-4 py-3 rounded-2xl text-xs leading-relaxed transition-all shadow-sm ${
+                      isUser
+                        ? 'bg-indigo-600 text-white rounded-tr-sm font-medium'
+                        : isHazard
+                          ? 'bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-slate-900 dark:text-white rounded-tl-sm'
+                          : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-tl-sm'
+                    }`}>
                       {msg.type === 'ai' ? (
-                        <div className="prose prose-invert prose-p:my-1 prose-pre:my-2 prose-pre:bg-black/40 prose-pre:p-2 prose-pre:rounded-lg max-w-none text-[11px]">
+                        <div className="prose prose-slate dark:prose-invert max-w-none text-xs leading-relaxed">
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                         </div>
                       ) : (
-                        <p>{msg.content}</p>
+                        <p className="font-medium whitespace-pre-wrap">{msg.content}</p>
                       )}
                     </div>
                   </div>
