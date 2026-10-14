@@ -116,10 +116,6 @@ function App() {
 
   const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
 
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
-
   const handleScanStarted = (reportId, chatId) => {
     // Immediate HUD engagement to prevent latency gap
     setScanProgress({ percent: 0, stage: 'Initializing autonomous sequence...', status: 'in-progress' });
@@ -490,7 +486,7 @@ function App() {
                     </h1>
 
                     <p className="text-slate-700 dark:text-slate-300 text-base sm:text-lg md:text-xl max-w-3xl mx-auto leading-relaxed mb-10 font-normal">
-                      Continuous page discovery, Core Web Vitals auditing, security threat detection, and AI-powered code remediation in a unified workspace.
+                      Continuous page discovery, Core Web Vitals auditing, security threat detection, and Senior QA diagnostic intelligence in a unified workspace.
                     </p>
 
                     <div className="flex flex-wrap items-center justify-center gap-5 mb-14">
@@ -521,7 +517,7 @@ function App() {
                       </div>
                       <div className="flex items-center gap-2.5">
                         <span className="size-2 rounded-full bg-violet-600" />
-                        Automated AI Code Fixes
+                        AI Root-Cause Diagnostics
                       </div>
                     </div>
                   </motion.div>

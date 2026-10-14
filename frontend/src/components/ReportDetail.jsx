@@ -403,9 +403,9 @@ const IssueTable = ({ data, columns, setRemediationCode, onAskAI, reportId }) =>
                         {row.suggestedFix && (
                           <button
                             onClick={(e) => { e.stopPropagation(); setRemediationCode(row.suggestedFix); }}
-                            className="px-3 py-1.5 bg-eu-accent/10 hover:bg-eu-accent text-white rounded-lg text-[9px] font-black uppercase tracking-widest border border-eu-accent/30 transition-all flex items-center gap-2 shadow-neon"
+                            className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 rounded-lg text-[9px] font-bold uppercase tracking-wider border border-indigo-200 dark:border-indigo-800 transition-all flex items-center gap-1.5"
                           >
-                            <Code size={12} /> Patch
+                            <Code size={12} /> Solution Code
                           </button>
                         )}
                         <Plus size={14} className={`text-slate-600 transition-transform duration-500 ${isExpanded ? 'rotate-45 text-eu-accent' : ''}`} />
@@ -560,7 +560,7 @@ const IssueTable = ({ data, columns, setRemediationCode, onAskAI, reportId }) =>
                                     onClick={() => setRemediationCode(row.suggestedFix)}
                                     className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all shadow-sm"
                                   >
-                                    Apply Patch
+                                    View Solution Code
                                   </button>
                                 )}
                               </div>
@@ -956,7 +956,7 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
                                       onClick={() => setRemediationCode(issue.remediationCode)}
                                       className="py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-sm font-outfit"
                                     >
-                                      <Code size={14} /> View Patch Code
+                                      <Code size={14} /> View Suggested Code
                                     </button>
                                   )}
                                   <button
@@ -1347,8 +1347,8 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
                 <div className="flex items-center gap-3">
                   <div className="size-9 bg-indigo-50 dark:bg-indigo-950/60 rounded-lg flex items-center justify-center text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800"><Code size={18} /></div>
                   <div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white font-outfit">AI Recommended Patch</h3>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">Automated resolution code snippet</p>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white font-outfit">AI Recommended Solution</h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">Diagnostic resolution code snippet</p>
                   </div>
                 </div>
                 <button onClick={() => setRemediationCode(null)} className="size-8 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all">

@@ -67,7 +67,7 @@ const AboutUs = () => {
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white">AI Substrate</h3>
               </div>
               <p className="text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed font-normal">
-                Llama-3 70B & 8B model cascading with 4-layer RAG context synthesis and verified line-level code patch generation.
+                Llama-3 70B & 8B model cascading with 4-layer RAG context synthesis and deep-dive root cause diagnostic reasoning.
               </p>
             </div>
           </motion.div>

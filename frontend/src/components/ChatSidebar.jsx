@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   MessageSquare, Plus, Activity, Globe, Pin, PinOff,
   Search, MoreVertical, Trash2, Edit2, LogOut, FileText,
-  RefreshCw, Clock, ChevronRight, Calendar, Brain, Cpu, Terminal
+  RefreshCw, Clock, ChevronRight, Calendar, Brain, Cpu, Terminal,
+  Sun, Moon
 } from 'lucide-react';
 
 
@@ -295,6 +296,13 @@ const ChatSidebar = ({
             </p>
             <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 truncate">{userData?.email || 'Offline'}</p>
           </div>
+          <button
+            onClick={onToggleTheme}
+            title={theme === 'dark' ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
+            className="size-8 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-lg flex items-center justify-center text-slate-700 dark:text-slate-300 transition-all border border-slate-200 dark:border-slate-600"
+          >
+            {theme === 'dark' ? <Sun size={13} className="text-amber-400" /> : <Moon size={13} className="text-indigo-600" />}
+          </button>
           <button onClick={handleReset} title="Logout"
             className="size-8 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 dark:bg-slate-700 dark:hover:bg-rose-950/40 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-400 transition-all border border-slate-200 dark:border-slate-600">
             <LogOut size={13} />
@@ -306,23 +314,24 @@ const ChatSidebar = ({
       {activeMenuId && createPortal(
         <>
           <div className="fixed inset-0 z-[999998]" onClick={() => setActiveMenuId(null)} />
-          <motion.div initial={{ opacity: 0, scale: 0.92, y: -6 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+          <motion.div initial={{ opacity: 0, scale: 0.95, y: -4 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0 }} transition={{ duration: 0.12 }}
+            className="fixed z-[999999] w-44 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-1.5 shadow-xl"
             style={{
-              position: 'fixed', top: menuPosition.top, left: menuPosition.left, zIndex: 999999, width: '12rem',
-              background: 'var(--eu-bg-card-glass)', backdropFilter: 'blur(24px)',
-              border: '1px solid rgba(255,0,127,0.2)', borderRadius: '14px', padding: '6px',
-              boxShadow: '0 8px 40px rgba(0,0,0,0.6)'
+              top: menuPosition.top,
+              left: menuPosition.left
             }}>
             {[
-              { icon: <Edit2 size={12} />, label: 'Rename', onClick: () => { handleRename(activeMenuId); setActiveMenuId(null); } },
-              { icon: <Pin size={12} />, label: 'Pin / Unpin', onClick: () => { handlePin(activeMenuId); setActiveMenuId(null); } },
-              { icon: <Trash2 size={12} />, label: 'Delete', danger: true, onClick: () => { handleDelete(activeMenuId); setActiveMenuId(null); } },
+              { icon: <Edit2 size={13} />, label: 'Rename', onClick: () => { handleRename(activeMenuId); setActiveMenuId(null); } },
+              { icon: <Pin size={13} />, label: 'Pin / Unpin', onClick: () => { handlePin(activeMenuId); setActiveMenuId(null); } },
+              { icon: <Trash2 size={13} />, label: 'Delete', danger: true, onClick: () => { handleDelete(activeMenuId); setActiveMenuId(null); } },
             ].map(({ icon, label, onClick, danger }) => (
               <button key={label} onClick={onClick}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 text-[10px] font-black uppercase tracking-wider rounded-lg mb-0.5 transition-all
-                  ${danger ? 'text-primary hover:bg-primary/10' : 'text-[var(--eu-text-main)] opacity-60 hover:opacity-100 hover:bg-white/5'}`}>
-                <span className={danger ? 'text-primary' : 'text-eu-accent'}>{icon}</span>
+                className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-lg mb-0.5 transition-colors
+                  ${danger 
+                    ? 'text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40' 
+                    : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
+                <span className={danger ? 'text-rose-500' : 'text-indigo-600 dark:text-indigo-400'}>{icon}</span>
                 {label}
               </button>
             ))}

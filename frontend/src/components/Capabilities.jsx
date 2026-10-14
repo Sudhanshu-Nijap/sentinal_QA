@@ -34,8 +34,8 @@ const CAPABILITIES = [
   },
   {
     icon: <Cpu size={22} />,
-    title: "AI Remediation Engine",
-    desc: "Llama-3 powered patch generator delivering verified, line-level code fixes with instant 1-click deployment to your repository."
+    title: "AI Root-Cause Diagnostics",
+    desc: "Llama-3 powered diagnostic engine investigating boundary conditions, runtime exceptions, and security vulnerabilities with reproduction steps and triage intelligence."
   },
   {
     icon: <Calendar size={22} />,

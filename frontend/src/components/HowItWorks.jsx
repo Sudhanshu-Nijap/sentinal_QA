@@ -20,13 +20,13 @@ const HowItWorks = () => {
       step: "03",
       icon: <Cpu size={22} />,
       title: "AI Synthesis",
-      desc: "Llama-3 reasoning engine correlates cross-tool telemetry to produce risk-stratified diagnostic reports and actionable remediation patches."
+      desc: "Llama-3 reasoning engine correlates cross-tool telemetry to produce risk-stratified diagnostic reports and actionable remediation advice."
     },
     {
       step: "04",
       icon: <Terminal size={22} />,
-      title: "Auto Remediation",
-      desc: "Deploy verified line-level code patches with 1-click execution or review diffs directly inside the built-in IDE environment."
+      title: "Actionable Bug Reports",
+      desc: "Export JIRA-ready bug tickets with exact reproduction steps, payload boundary analysis, and senior QA recommendations."
     }
   ];
 
@@ -41,7 +41,7 @@ const HowItWorks = () => {
             How Sentinel Works
           </h2>
           <p className="text-slate-700 dark:text-slate-300 text-base sm:text-lg max-w-2xl mx-auto mt-4 leading-relaxed font-normal">
-            Four automated steps from URL submission to production patch deployment.
+            Four automated steps from URL submission to senior QA bug reports.
           </p>
         </div>
 
