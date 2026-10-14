@@ -28,9 +28,11 @@ const crawlWebsite = async (reportId, baseUrl, emitProgress, options = {}) => {
         if (emitProgress) emitProgress(p, s);
     };
     
-    let domain;
+    let domain, baseOrigin;
     try {
-        domain = new URL(baseUrl).hostname;
+        const parsed = new URL(baseUrl);
+        domain = parsed.hostname;
+        baseOrigin = parsed.origin;
     } catch (_) {
         return [baseUrl];
     }
@@ -212,7 +214,7 @@ const crawlWebsite = async (reportId, baseUrl, emitProgress, options = {}) => {
                             while ((match = routeRegex.exec(scriptRes.data)) !== null && minedCount < 15) {
                                 const routePath = match[1];
                                 if (!/\.(png|jpg|jpeg|gif|css|svg|woff2?|ttf|ico|json)$/i.test(routePath) && routePath.length > 2) {
-                                    const minedUrl = `https://${domain}${routePath}`;
+                                    const minedUrl = `${baseOrigin}${routePath}`;
                                     if (!visited.has(minedUrl) && !queue.some(q => q.url === minedUrl)) {
                                         queue.push({ url: minedUrl, depth: depth + 1 });
                                         minedCount++;

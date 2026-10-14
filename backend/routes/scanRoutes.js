@@ -11,6 +11,9 @@ const qaAgent = require('../services/qaAgent');
 const reportExporter = require('../services/reportExporter');
 const scanEngine = require('../services/scanEngine');
 const axios = require('axios');
+const linkGuardian = require('../services/linkGuardian');
+const Message = require('../models/Message');
+const Chat = require('../models/Chat');
 const { analyzeURLSecurity } = require('../services/urlSecurityAnalyzer');
 
 // Global registry of tactical workers for lifecycle control

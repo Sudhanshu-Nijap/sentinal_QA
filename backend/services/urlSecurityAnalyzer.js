@@ -52,16 +52,21 @@ async function analyzeURLSecurity(urlString) {
 
         const hostname = urlObj.hostname.toLowerCase();
 
-        // 1. SSRF & Private IP Address Blocklist
-        if (
+        // 1. SSRF & Private IP Address Blocklist (allows local scanning in development)
+        const isLocalHost = (
             hostname === 'localhost' || 
             hostname === '127.0.0.1' || 
             hostname === '0.0.0.0' || 
-            hostname === '::1' ||
+            hostname === '::1'
+        );
+        const isPrivateIp = (
             hostname.startsWith('192.168.') || 
             hostname.startsWith('10.') ||
             hostname.startsWith('172.16.')
-        ) {
+        );
+        const allowLocal = process.env.ALLOW_LOCAL_SCAN === 'true' || process.env.NODE_ENV !== 'production';
+
+        if ((isLocalHost && !allowLocal) || (isPrivateIp && !allowLocal)) {
             const blockVerdict = { 
                 blocked: true, 
                 riskLevel: 'high', 
