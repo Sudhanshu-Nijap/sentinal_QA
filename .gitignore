@@ -18,3 +18,4 @@ brain/
 *.log
 .vercel
 .env*.local
+scratch/
