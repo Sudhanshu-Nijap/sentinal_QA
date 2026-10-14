@@ -132,10 +132,10 @@ const ScanForm = ({ onScanStarted }) => {
         <form onSubmit={handleSubmit} className="relative group">
           <div className="absolute -inset-1 bg-transparent rounded-[32px] blur-2xl transition-opacity duration-700" />
           
-          <div className={`relative bg-white dark:bg-black p-2 sm:p-3 transition-all duration-500 border border-[var(--eu-glass-border)] ${error ? 'border-primary/50 shadow-[0_0_20px_rgba(var(--eu-accent-rgb),0.1)]' : 'group-focus-within:border-primary/50 group-focus-within:glow-shadow'} rounded-[24px] sm:rounded-[28px] shadow-2xl`}>
+          <div className={`relative bg-white dark:bg-slate-900 p-2 sm:p-3 transition-all duration-300 border ${error ? 'border-rose-400 shadow-md' : 'border-slate-200 dark:border-slate-800 shadow-lg group-focus-within:border-indigo-500 group-focus-within:ring-2 group-focus-within:ring-indigo-500/20'} rounded-[24px] sm:rounded-[28px]`}>
             <div className="flex flex-col md:flex-row items-center gap-2 sm:gap-4">
               <div className="flex-1 relative flex items-center w-full">
-                <div className="absolute left-5 sm:left-6 text-text-muted/50 group-focus-within:text-primary transition-colors">
+                <div className="absolute left-5 sm:left-6 text-slate-400 group-focus-within:text-indigo-600 transition-colors">
                   <Globe size={18} className="sm:size-[20px]" />
                 </div>
                 <input 
@@ -146,21 +146,21 @@ const ScanForm = ({ onScanStarted }) => {
                     if (error) setError('');
                   }}
                   placeholder="Enter target URL (e.g. https://example.com)"
-                  className="w-full h-14 sm:h-16 bg-transparent border-none pl-12 sm:pl-16 pr-4 sm:pr-6 text-base sm:text-lg font-semibold focus:outline-none text-[var(--eu-text-main)] placeholder-slate-500"
+                  className="w-full h-14 sm:h-16 bg-transparent border-none pl-12 sm:pl-16 pr-4 sm:pr-6 text-base sm:text-lg font-semibold focus:outline-none text-slate-900 dark:text-white placeholder-slate-400"
                 />
               </div>
 
               <button 
                 type="submit"
                 disabled={loading}
-                className="btn-premium px-8 sm:px-10 h-14 sm:h-16 text-white rounded-xl sm:rounded-2xl transition-all active:scale-[0.98] font-bold tracking-wide text-sm disabled:opacity-50 w-full md:w-auto overflow-hidden group"
+                className="bg-indigo-600 hover:bg-indigo-700 px-8 sm:px-10 h-14 sm:h-16 text-white rounded-xl sm:rounded-2xl transition-all active:scale-[0.98] font-bold tracking-wide text-sm disabled:opacity-50 w-full md:w-auto overflow-hidden group shadow-md shadow-indigo-600/20"
               >
                 <div className="flex items-center justify-center gap-3 relative z-10">
                   {loading ? (
                     <Loader2 size={20} className="animate-spin" />
                   ) : (
                     <>
-                      <span>{showScheduling ? 'Confirm Schedule' : 'Start Audit'}</span>
+                      <span>{showScheduling ? 'Confirm Schedule' : 'Start Autonomous Audit'}</span>
                       <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                     </>
                   )}
@@ -171,16 +171,16 @@ const ScanForm = ({ onScanStarted }) => {
 
           <div className="mt-4 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
             {/* Audit Scope Toggle */}
-            <div className="flex items-center gap-2 bg-slate-900/60 px-3.5 py-1.5 rounded-xl border border-slate-800">
-              <span className="text-[11px] font-semibold text-slate-400">Scope:</span>
-              <div className="flex gap-1 p-0.5 bg-slate-950 rounded-lg border border-slate-800/80">
+            <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800/80 px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+              <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">Scope:</span>
+              <div className="flex gap-1 p-0.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
                 <button
                   type="button"
                   onClick={() => setScope('site')}
-                  className={`px-3 py-1 rounded-md text-[11px] font-semibold transition-all flex items-center gap-1.5 ${
+                  className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all flex items-center gap-1.5 ${
                     scope === 'site'
                       ? 'bg-indigo-600 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                      : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                   title="Crawls all internal pages via sitemaps, navigation links, and JavaScript router endpoints"
                 >
@@ -190,10 +190,10 @@ const ScanForm = ({ onScanStarted }) => {
                 <button
                   type="button"
                   onClick={() => setScope('single')}
-                  className={`px-3 py-1 rounded-md text-[11px] font-semibold transition-all flex items-center gap-1.5 ${
+                  className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all flex items-center gap-1.5 ${
                     scope === 'single'
                       ? 'bg-indigo-600 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                      : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800'
                   }`}
                   title="Audits only the single target URL entered"
                 >
@@ -203,21 +203,21 @@ const ScanForm = ({ onScanStarted }) => {
               </div>
             </div>
 
-            <div className="w-[1px] h-4 bg-slate-800 hidden sm:block" />
+            <div className="w-[1px] h-4 bg-slate-300 dark:bg-slate-700 hidden sm:block" />
 
             {/* Scan Depth Intensity */}
-            <div className="flex items-center gap-2 bg-slate-900/60 px-3.5 py-1.5 rounded-xl border border-slate-800">
-              <span className="text-[11px] font-semibold text-slate-400">Depth:</span>
-              <div className="flex gap-1 p-0.5 bg-slate-950 rounded-lg border border-slate-800/80">
+            <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800/80 px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+              <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">Depth:</span>
+              <div className="flex gap-1 p-0.5 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700">
                 {['minimal', 'standard', 'maximum'].map((level) => (
                   <button
                     key={level}
                     type="button"
                     onClick={() => setChaosIntensity(level)}
-                    className={`px-2.5 py-1 rounded-md text-[11px] font-semibold capitalize transition-all ${
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-bold capitalize transition-all ${
                       chaosIntensity === level 
                         ? 'bg-indigo-600 text-white shadow-sm' 
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                        : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800'
                     }`}
                   >
                     {level}
@@ -226,16 +226,16 @@ const ScanForm = ({ onScanStarted }) => {
               </div>
             </div>
 
-            <div className="w-[1px] h-4 bg-slate-800 hidden sm:block" />
+            <div className="w-[1px] h-4 bg-slate-300 dark:bg-slate-700 hidden sm:block" />
 
             {/* Schedule Toggle */}
             <button
                type="button"
                onClick={() => setShowScheduling(!showScheduling)}
-               className={`flex items-center gap-2 px-4 py-1.5 rounded-xl border text-[11px] font-semibold tracking-wide transition-all ${
+               className={`flex items-center gap-2 px-4 py-1.5 rounded-xl border text-[11px] font-bold tracking-wide transition-all shadow-sm ${
                  showScheduling 
-                  ? 'bg-indigo-500/15 border-indigo-500/40 text-indigo-400' 
-                  : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+                  ? 'bg-indigo-50 border-indigo-300 text-indigo-700 dark:bg-indigo-950/60 dark:border-indigo-700 dark:text-indigo-300' 
+                  : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-slate-950 hover:bg-slate-50'
                }`}
             >
                <Calendar size={13} />

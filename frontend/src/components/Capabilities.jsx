@@ -48,13 +48,13 @@ const Capabilities = () => {
   return (
     <div className="max-w-7xl mx-auto px-6 py-20 sm:py-28">
       <div className="text-center mb-16 sm:mb-20">
-        <span className="text-xs font-bold uppercase tracking-widest text-indigo-400 bg-indigo-500/10 px-4 py-1.5 rounded-full border border-indigo-500/20 inline-block mb-4">
+        <span className="text-xs font-bold uppercase tracking-widest text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-4 py-1.5 rounded-full border border-indigo-200 dark:border-indigo-800 inline-block mb-4">
           Core Capabilities
         </span>
-        <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-100 tracking-tight leading-tight">
+        <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight">
           Enterprise Security & Diagnostics
         </h2>
-        <p className="text-slate-300 text-base sm:text-lg max-w-2xl mx-auto mt-4 leading-relaxed font-normal">
+        <p className="text-slate-700 dark:text-slate-300 text-base sm:text-lg max-w-2xl mx-auto mt-4 leading-relaxed font-normal">
           Comprehensive automated auditing modules engineered for modern, high-availability web applications.
         </p>
       </div>
@@ -67,18 +67,18 @@ const Capabilities = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: index * 0.08, duration: 0.4 }}
-            className="p-8 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-indigo-500/50 hover:bg-slate-900 transition-all duration-300 group flex flex-col justify-between"
+            className="p-8 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 dark:hover:border-indigo-500/50 shadow-sm hover:shadow-md transition-all duration-300 group flex flex-col justify-between"
           >
             <div>
-              <div className="size-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-6 group-hover:scale-110 transition-transform">
+              <div className="size-12 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-6 group-hover:scale-110 transition-transform">
                 {cap.icon}
               </div>
 
-              <h3 className="text-lg sm:text-xl font-bold text-slate-100 mb-3 group-hover:text-indigo-400 transition-colors">
+              <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-3 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                 {cap.title}
               </h3>
 
-              <p className="text-slate-300 text-sm sm:text-base leading-relaxed font-normal">
+              <p className="text-slate-600 dark:text-slate-300 text-sm sm:text-base leading-relaxed font-normal">
                 {cap.desc}
               </p>
             </div>

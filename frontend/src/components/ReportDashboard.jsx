@@ -201,22 +201,21 @@ const ReportDashboard = ({ onSelectReport, isBentoView, refreshKey, theme, onDel
   return (
     <div className={`w-full ${isBentoView ? 'h-full flex flex-col' : ''}`}>
       {!isBentoView && (
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-10 mb-16 px-4 sm:px-0">
-        <div className="flex flex-col gap-6 w-full sm:w-auto">
-           <div className="flex items-center gap-6">
-              <div className="h-px w-12 bg-eu-accent/40" />
-              <span className="text-[10px] font-black tracking-industrial text-eu-accent uppercase opacity-50">Intel Records</span>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 px-4 sm:px-0">
+        <div className="flex flex-col gap-1 w-full sm:w-auto">
+           <div className="flex items-center gap-2">
+              <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Audit Records</span>
            </div>
-           <div className="flex items-center gap-5">
-              <h2 className="text-4xl sm:text-6xl font-black uppercase tracking-tight-mega premium-gradient-text font-outfit">Lattice</h2>
-              <div className="flex gap-3">
-                <span className="flex items-center justify-center text-[11px] font-black px-3 h-7 rounded-xl bg-eu-accent/10 text-eu-accent border border-eu-accent/20 shadow-neon">
+           <div className="flex items-center gap-4">
+              <h2 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white font-outfit tracking-tight">Audit Archive</h2>
+              <div className="flex gap-2">
+                <span className="flex items-center justify-center text-xs font-bold px-2.5 h-6 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-700 dark:bg-indigo-950 dark:border-indigo-800 dark:text-indigo-300">
                     {reports.length}
                 </span>
                 {selectedReports.length > 0 && (
                     <button 
                       onClick={() => setSelectedReports([])}
-                      className="px-3 h-7 rounded-xl bg-primary/10 text-primary border border-primary/20 text-[9px] font-black uppercase shadow-neon"
+                      className="px-2.5 h-6 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 text-[10px] font-bold uppercase"
                     >
                       Clear Selection ({selectedReports.length})
                     </button>
@@ -225,17 +224,17 @@ const ReportDashboard = ({ onSelectReport, isBentoView, refreshKey, theme, onDel
            </div>
         </div>
 
-        <div className="flex items-center gap-4 w-full md:w-auto">
+        <div className="flex items-center gap-3 w-full md:w-auto">
           {selectedReports.length > 0 && (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               {selectedReports.length === 2 && (
                 <button 
                   onClick={runShadowScan}
                   disabled={comparing}
-                  className="h-14 px-8 bg-eu-accent text-white rounded-[20px] text-[12px] font-black uppercase tracking-widest shadow-neon hover:scale-110 active:scale-95 transition-all flex items-center gap-3 disabled:opacity-50"
+                  className="h-10 px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-sm transition-all flex items-center gap-2 disabled:opacity-50"
                 >
-                  {comparing ? <Loader2 className="animate-spin" size={16} /> : <Zap size={16} />}
-                  Run Shadow scan
+                  {comparing ? <Loader2 className="animate-spin" size={14} /> : <Zap size={14} />}
+                  Compare Scans
                 </button>
               )}
               <button 
@@ -251,33 +250,34 @@ const ReportDashboard = ({ onSelectReport, isBentoView, refreshKey, theme, onDel
                       await handleDelete(id);
                     }
                     setSelectedReports([]);
-                    setAlert({ type: 'success', message: `${selectedReports.length} traces purged from neural index.` });
+                    setAlert({ type: 'success', message: `${selectedReports.length} logs purged successfully.` });
                   }
                 }}
-                className="h-14 px-8 bg-primary/10 hover:bg-primary text-primary hover:text-white rounded-[20px] text-[12px] font-black uppercase tracking-widest border border-primary/20 transition-all flex items-center gap-3"
+                className="h-10 px-4 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2"
               >
-                <Trash2 size={16} />
-                Purge Selected
+                <Trash2 size={14} />
+                Delete Selected
               </button>
             </div>
           )}
 
-          <div className="relative flex-1 md:w-80 group">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-[var(--eu-text-muted)] group-focus-within:text-eu-accent transition-colors size-5" />
+          <div className="relative flex-1 md:w-72">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 size-4" />
             <input 
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Filter Lattice..."
-              className="w-full h-14 bg-[var(--eu-bg-card)] border border-[var(--eu-glass-border)] rounded-[20px] pl-14 pr-6 text-[13px] font-black tracking-industrial uppercase focus:outline-none focus:border-primary/30 focus:shadow-neon transition-all placeholder:text-[var(--eu-text-main)] placeholder:opacity-20 shadow-lg"
+              placeholder="Search reports..."
+              className="w-full h-10 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-4 text-xs font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-sm transition-all"
             />
           </div>
           
           <button 
             onClick={() => fetchReports()}
-            className="w-14 h-14 bg-[var(--eu-bg-card)] border border-[var(--eu-glass-border)] rounded-[20px] flex items-center justify-center hover:border-eu-accent/30 text-[var(--eu-text-main)] opacity-40 hover:opacity-100 transition-all active:scale-95 shadow-lg"
+            className="size-10 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-all shadow-sm"
+            title="Refresh reports"
           >
-            <RefreshCcw size={18} className={loading ? 'animate-spin text-eu-accent' : ''} />
+            <RefreshCcw size={15} className={loading ? 'animate-spin text-indigo-600' : ''} />
           </button>
         </div>
       </div>
@@ -286,29 +286,22 @@ const ReportDashboard = ({ onSelectReport, isBentoView, refreshKey, theme, onDel
       {/* Dashboard Grid */}
       <div className="relative min-h-[300px] sm:min-h-[400px]">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-24 sm:py-40 glass-card border-dashed border-white/10 mx-4 sm:mx-0">
-            <div className="relative flex items-center justify-center mb-6 sm:mb-8">
-               <motion.div 
-                 animate={{ rotate: 360 }}
-                 transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-                 className="absolute inset-[-20px] sm:inset-[-30px] border border-dashed border-primary/20 rounded-full" 
-               />
-               <Loader2 className="animate-spin text-primary size-12 sm:size-[60px]" strokeWidth={1} />
-            </div>
-            <p className="text-text-muted font-black tracking-[0.4em] uppercase text-[8px] sm:text-[10px] opacity-40 animate-pulse">Requesting Uplink Access...</p>
+          <div className="flex flex-col items-center justify-center py-24 sm:py-32 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl mx-4 sm:mx-0 shadow-sm">
+            <Loader2 className="animate-spin text-indigo-600 mb-4" size={36} />
+            <p className="text-slate-600 dark:text-slate-400 font-bold tracking-wider uppercase text-xs">Loading Inspection Archive...</p>
           </div>
         ) : filteredReports.length === 0 ? (
           <motion.div 
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="p-16 sm:p-32 text-center glass-card border-dashed border-white/10 mx-4 sm:mx-0"
+            className="p-12 sm:p-20 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl mx-4 sm:mx-0 shadow-sm"
           >
-            <div className="w-16 h-16 sm:w-20 sm:h-20 bg-primary/5 rounded-[24px] sm:rounded-[30px] flex items-center justify-center mx-auto mb-6 sm:mb-8 border border-primary/5">
-              <Database className="text-primary/10 size-8 sm:size-[36px]" />
+            <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-950/60 rounded-xl flex items-center justify-center mx-auto mb-4 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400">
+              <Database size={24} />
             </div>
-            <h3 className="text-xl sm:text-2xl font-black text-[var(--eu-text-main)] mb-2 sm:mb-4 uppercase tracking-tight">System Index Clear</h3>
-            <p className="text-text-muted text-sm sm:text-lg max-w-sm mx-auto font-medium opacity-40 leading-relaxed">
-              No authenticated diagnostic signatures found in the current localized memory sector.
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2 font-outfit">No Reports Found</h3>
+            <p className="text-slate-600 dark:text-slate-400 text-xs sm:text-sm max-w-sm mx-auto font-normal leading-relaxed">
+              No diagnostic test reports have been indexed yet. Launch a new scan from the console to generate audit telemetry.
             </p>
           </motion.div>
         ) : (

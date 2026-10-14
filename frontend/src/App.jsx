@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, Shield, Bug, Activity, Command, Cpu, Zap, Skull, X, Calendar, Bot } from 'lucide-react';
+import { ShieldCheck, Shield, Bug, Activity, Command, Cpu, Zap, Skull, X, Calendar, Bot, Sun, Moon } from 'lucide-react';
 import axios from 'axios';
 
 import ScanForm from './components/ScanForm';
@@ -40,7 +40,10 @@ function App() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
-  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem('sentinel_white_theme_preference');
+    return saved ? saved : 'light';
+  });
   const [activeView, setActiveView] = useState('chat');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -67,6 +70,7 @@ function App() {
     } else {
       document.documentElement.classList.remove('dark');
     }
+    localStorage.setItem('sentinel_white_theme_preference', theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
 
@@ -367,24 +371,24 @@ function App() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: -100, opacity: 0 }}
           className={`fixed z-50 transition-all duration-700 ${isLoggedIn
-            ? "top-0 left-0 w-full px-4 py-2 sm:px-6 sm:py-3 bg-[var(--eu-bg-void)] border-b border-[var(--eu-glass-border)]"
-            : "top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-7xl px-4 py-3 md:px-8 md:py-4 glass-euphoria border border-[var(--eu-glass-border)] shadow-2xl rounded-[24px] md:rounded-[32px]"
+            ? "top-0 left-0 w-full px-4 py-2 sm:px-6 sm:py-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-sm"
+            : "top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-7xl px-4 py-3 md:px-8 md:py-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/90 dark:border-slate-800/90 shadow-md rounded-[20px]"
             } flex items-center justify-between`}
         >
           <div className="flex items-center gap-2 sm:gap-4">
             {isLoggedIn && (
               <button
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="lg:hidden p-2 hover:bg-[var(--eu-bg-void)]/40 rounded-xl transition-colors"
+                className="lg:hidden p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
                 title="Toggle Sidebar"
               >
                 <Command size={18} className="text-primary" />
               </button>
             )}
-            <div className={`size-7 sm:size-8 bg-primary/20 rounded-lg flex items-center justify-center border border-primary/30 ${!isLoggedIn && 'shadow-neon'}`}>
-              <Shield className="text-primary size-3 sm:size-4" />
+            <div className={`size-7 sm:size-8 bg-indigo-50 dark:bg-indigo-950/50 rounded-lg flex items-center justify-center border border-indigo-200 dark:border-indigo-800 ${!isLoggedIn && 'shadow-sm'}`}>
+              <Shield className="text-indigo-600 dark:text-indigo-400 size-3 sm:size-4" />
             </div>
-            <a href="#home" className="font-outfit font-black text-base sm:text-xl tracking-tight-mega uppercase premium-gradient-text hover:opacity-80 transition-opacity">Sentinel</a>
+            <a href="#home" className="font-outfit font-black text-base sm:text-xl tracking-tight uppercase text-slate-900 dark:text-white hover:opacity-80 transition-opacity">Sentinel</a>
           </div>
 
           {!isLoggedIn && (
@@ -398,10 +402,10 @@ function App() {
                 <a
                   key={link.name}
                   href={link.href}
-                  className="text-xs font-medium text-slate-400 hover:text-slate-100 transition-colors relative group py-1"
+                  className="text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors relative group py-1"
                 >
                   {link.name}
-                  <span className="absolute bottom-0 left-0 w-0 h-[1.5px] bg-indigo-500 transition-all group-hover:w-full" />
+                  <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-indigo-600 transition-all group-hover:w-full" />
                 </a>
               ))}
             </nav>
@@ -423,7 +427,7 @@ function App() {
                   }}
                   className={`px-4 py-2 rounded-xl transition-all border flex items-center gap-2 font-semibold text-xs ${activeView === v.id
                       ? 'bg-indigo-600 border-indigo-500 text-white shadow-sm'
-                      : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
+                      : 'bg-slate-100 hover:bg-slate-200/80 border-slate-200 text-slate-800 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200 hover:text-slate-950'
                     }`}
                   title={v.title}
                 >
@@ -437,16 +441,16 @@ function App() {
           <div className="flex items-center gap-3">
             <button
               onClick={toggleTheme}
-              className="p-2.5 bg-slate-900/60 hover:bg-slate-800/80 rounded-xl transition-all border border-slate-800 text-slate-300"
-              title="Toggle Theme"
+              className="p-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl transition-all border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200"
+              title={theme === 'dark' ? "Switch to White Theme" : "Switch to Dark Theme"}
             >
-              <Zap size={16} fill={theme === 'dark' ? "currentColor" : "none"} className={theme === 'dark' ? "text-indigo-400" : ""} />
+              {theme === 'dark' ? <Sun size={16} className="text-amber-400" /> : <Moon size={16} className="text-slate-700" />}
             </button>
 
             {!isLoggedIn && (
               <button
                 onClick={() => setIsAuthOpen(true)}
-                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-xl transition-all shadow-md active:scale-95"
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl transition-all shadow-sm active:scale-95"
               >
                 Sign In
               </button>
@@ -467,7 +471,7 @@ function App() {
             >
               {/* Hero Section */}
               <section id="home" className="relative min-h-[90vh] flex items-center justify-center px-4 overflow-hidden pt-24 pb-16">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[450px] bg-indigo-500/10 rounded-full blur-[140px] -z-10" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[450px] bg-indigo-500/5 rounded-full blur-[140px] -z-10" />
 
                 <div className="text-center z-10 max-w-5xl w-full mx-auto px-6">
                   <motion.div
@@ -475,24 +479,24 @@ function App() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6 }}
                   >
-                    <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs sm:text-sm font-semibold tracking-wide mb-8">
-                      <Shield size={16} className="text-indigo-400" />
+                    <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs sm:text-sm font-semibold tracking-wide mb-8">
+                      <Shield size={16} className="text-indigo-600" />
                       Autonomous QA & Security Platform
                     </span>
 
-                    <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-slate-100 mb-8 leading-[1.15]">
+                    <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-8 leading-[1.15]">
                       Automated Web Security <br className="hidden sm:block" />
                       & Performance Intelligence
                     </h1>
 
-                    <p className="text-slate-300 text-base sm:text-lg md:text-xl max-w-3xl mx-auto leading-relaxed mb-10 font-normal">
+                    <p className="text-slate-700 dark:text-slate-300 text-base sm:text-lg md:text-xl max-w-3xl mx-auto leading-relaxed mb-10 font-normal">
                       Continuous page discovery, Core Web Vitals auditing, security threat detection, and AI-powered code remediation in a unified workspace.
                     </p>
 
                     <div className="flex flex-wrap items-center justify-center gap-5 mb-14">
                       <button
                         onClick={() => setIsAuthOpen(true)}
-                        className="px-8 py-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm tracking-wide transition-all shadow-xl shadow-indigo-500/25 active:scale-95 flex items-center gap-2.5"
+                        className="px-8 py-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm tracking-wide transition-all shadow-md shadow-indigo-600/20 active:scale-95 flex items-center gap-2.5"
                       >
                         <Zap size={18} />
                         Get Started Free
@@ -500,23 +504,23 @@ function App() {
 
                       <button
                         onClick={() => setIsAuthOpen(true)}
-                        className="px-8 py-4 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-slate-200 font-bold text-sm tracking-wide transition-all active:scale-95"
+                        className="px-8 py-4 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-900 font-bold text-sm tracking-wide transition-all active:scale-95 shadow-sm"
                       >
                         Sign In
                       </button>
                     </div>
 
-                    <div className="pt-10 border-t border-slate-800/80 flex flex-wrap items-center justify-center gap-10 text-xs sm:text-sm font-semibold text-slate-400">
+                    <div className="pt-10 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-center gap-10 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
                       <div className="flex items-center gap-2.5">
-                        <span className="size-2 rounded-full bg-indigo-500" />
+                        <span className="size-2 rounded-full bg-indigo-600" />
                         100% Page Crawling Accuracy
                       </div>
                       <div className="flex items-center gap-2.5">
-                        <span className="size-2 rounded-full bg-emerald-500" />
+                        <span className="size-2 rounded-full bg-emerald-600" />
                         Lighthouse Core Web Vitals
                       </div>
                       <div className="flex items-center gap-2.5">
-                        <span className="size-2 rounded-full bg-violet-500" />
+                        <span className="size-2 rounded-full bg-violet-600" />
                         Automated AI Code Fixes
                       </div>
                     </div>

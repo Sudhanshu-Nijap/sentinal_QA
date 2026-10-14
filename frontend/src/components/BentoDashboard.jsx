@@ -25,14 +25,14 @@ const BentoDashboard = ({ onScanStarted, onSelectReport, refreshKey, theme }) =>
         
         {/* --- Primary GPT Interface (Hero) --- */}
         <motion.div 
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
           className="w-full min-h-[600px] sm:min-h-[700px] flex flex-col"
         >
-          <div className="flex items-center gap-4 sm:gap-6 mb-8">
-            <div className="h-px w-12 sm:w-16 bg-primary" />
-            <span className="text-[10px] sm:text-[12px] font-black tracking-industrial text-primary uppercase opacity-60">Neural Command Interface</span>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="h-0.5 w-8 bg-indigo-600 dark:bg-indigo-400 rounded-full" />
+            <span className="text-xs font-bold tracking-wider text-indigo-600 dark:text-indigo-400 uppercase">Command Console</span>
           </div>
           
           <div className="flex-1">
@@ -42,14 +42,14 @@ const BentoDashboard = ({ onScanStarted, onSelectReport, refreshKey, theme }) =>
 
         {/* --- Diagnostic Logs / Archives --- */}
         <motion.div 
-           initial={{ opacity: 0, y: 40 }}
+           initial={{ opacity: 0, y: 20 }}
            animate={{ opacity: 1, y: 0 }}
-           transition={{ delay: 0.2, duration: 0.8 }}
-           className="glass-panel rounded-[32px] p-6 sm:p-12 border-[var(--eu-glass-border)] flex flex-col min-h-[500px]"
+           transition={{ delay: 0.1, duration: 0.5 }}
+           className="bg-white dark:bg-slate-900 rounded-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col min-h-[500px]"
         >
-          <div className="flex items-center gap-4 sm:gap-6 mb-8 sm:mb-12">
-            <div className="h-px w-12 sm:w-16 bg-primary/40" />
-            <span className="text-[10px] sm:text-[12px] font-black tracking-industrial text-primary/60 uppercase">Authenticated Archives</span>
+          <div className="flex items-center gap-3 mb-6">
+            <div className="h-0.5 w-8 bg-indigo-600/60 dark:bg-indigo-400/60 rounded-full" />
+            <span className="text-xs font-bold tracking-wider text-slate-700 dark:text-slate-300 uppercase">Diagnostic Archives</span>
           </div>
           
           <ReportDashboard 

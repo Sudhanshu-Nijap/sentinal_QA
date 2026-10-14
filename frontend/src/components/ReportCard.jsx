@@ -71,30 +71,27 @@ const ReportCard = ({ report, onClick, onDelete, onPin, onShare, onRename, onArc
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 30 }}
+      initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      whileHover={{ y: -10, scale: 1.02 }}
-      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
       className="group relative cursor-pointer h-full"
       onClick={() => onClick && onClick(report._id)}
     >
-      <div className="relative h-full bg-white dark:bg-black border border-[var(--eu-glass-border)] p-8 flex flex-col gap-8 overflow-hidden rounded-[36px] shadow-2xl transition-all duration-700">
-        {/* Decorative Background Blob */}
-        <div className="absolute top-[-20%] right-[-20%] size-32 bg-eu-accent/5 blur-3xl rounded-full transition-all duration-700" />
-
-        {/* Card Header */   }
-        <div className="flex justify-between items-start gap-5">
-          <div className="space-y-2 min-w-0">
-             <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--eu-text-main)] opacity-40 group-hover:text-eu-accent transition-colors">
-                <Globe size={14} />
-                <span>Diagnostic Node</span>
+      <div className="relative h-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 flex flex-col gap-5 overflow-hidden rounded-2xl shadow-sm hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700 transition-all duration-300">
+        {/* Card Header */}
+        <div className="flex justify-between items-start gap-4">
+          <div className="space-y-1 min-w-0">
+             <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-indigo-600 transition-colors">
+                <Globe size={13} />
+                <span>Inspection Target</span>
              </div>
-             <h3 className="text-2xl font-black tracking-tight-mega text-white group-hover:premium-gradient-text transition-all truncate font-outfit">
+             <h3 className="text-xl font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 transition-colors truncate font-outfit">
                {domain}
              </h3>
           </div>
-          <div className="flex items-center gap-3 relative">
+          <div className="flex items-center gap-2 relative">
             <div className="relative">
               <button 
                 onClick={(e) => { 
@@ -102,35 +99,34 @@ const ReportCard = ({ report, onClick, onDelete, onPin, onShare, onRename, onArc
                   const rect = e.currentTarget.getBoundingClientRect();
                   onOpenMenu(report._id, { top: rect.top, left: rect.right + 12 });
                 }}
-                className={`p-3 rounded-2xl border transition-all active:scale-90 ${isMenuOpen ? 'bg-eu-accent border-eu-accent text-white shadow-neon' : 'bg-[var(--eu-bg-void)] border-[var(--eu-glass-border)] text-eu-text-muted hover:text-white hover:border-white/20'}`}
+                className={`size-8 rounded-lg border transition-all flex items-center justify-center ${isMenuOpen ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-slate-100'}`}
               >
-                <MoreVertical size={18} />
+                <MoreVertical size={15} />
               </button>
-
             </div>
             
             <button 
               onClick={(e) => { e.stopPropagation(); onPin(report._id); }}
-              className={`p-3 rounded-2xl border transition-all active:scale-90 relative ${report.isPinned ? 'bg-eu-accent border-eu-accent text-white shadow-neon' : 'bg-[var(--eu-bg-void)] border-[var(--eu-glass-border)] text-eu-text-muted hover:text-eu-accent hover:border-eu-accent/30'}`}
+              className={`size-8 rounded-lg border transition-all flex items-center justify-center ${report.isPinned ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:text-indigo-600 hover:border-indigo-300'}`}
               title={report.isPinned ? "Unpin intelligence" : "Pin intelligence"}
             >
-               <Pin size={18} className={report.isPinned ? 'fill-current' : ''} />
+               <Pin size={15} className={report.isPinned ? 'fill-current' : ''} />
             </button>
 
-            <div className={`${getStatusColor(report.status)} p-3 bg-[var(--eu-bg-void)] rounded-2xl border border-[var(--eu-glass-border)] shadow-neon relative`}>
-               <Shield size={18} className={report.status === 'in-progress' ? 'animate-spin' : 'animate-pulse'} />
+            <div className={`size-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex items-center justify-center ${getStatusColor(report.status)}`}>
+               <Shield size={15} className={report.status === 'in-progress' ? 'animate-spin' : ''} />
             </div>
           </div>
         </div>
 
         {/* Neural Metrics */}
-        <div className="grid grid-cols-2 gap-4">
-           <div className="p-4 bg-[var(--eu-bg-void)] rounded-2xl border border-[var(--eu-glass-border)] group-hover:border-eu-accent/20 transition-colors">
-              <div className="flex items-center gap-2 mb-2 opacity-40 group-hover:opacity-100 transition-opacity">
-                 <AlertCircle size={12} className="text-primary" />
-                 <p className="text-[9px] font-black text-[var(--eu-text-main)] opacity-40 uppercase tracking-[0.2em]">Defects</p>
+        <div className="grid grid-cols-2 gap-3">
+           <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 group-hover:border-indigo-200 dark:group-hover:border-indigo-800 transition-colors">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                 <AlertCircle size={13} className="text-amber-500" />
+                 <p className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Defects</p>
               </div>
-              <p className="text-3xl font-black tracking-tighter text-white">
+              <p className="text-2xl font-black tracking-tight text-slate-900 dark:text-white font-outfit">
                 {(report.brokenLinks?.length || 0) + 
                  (report.consoleErrors?.length || 0) + 
                  (report.formIssues?.length || 0) + 
@@ -138,23 +134,23 @@ const ReportCard = ({ report, onClick, onDelete, onPin, onShare, onRename, onArc
                  (report.accessibilityIssues?.length || 0)}
               </p>
            </div>
-           <div className="p-4 bg-[var(--eu-bg-void)] rounded-2xl border border-[var(--eu-glass-border)] group-hover:border-eu-accent/20 transition-colors">
-              <div className="flex items-center gap-2 mb-2 opacity-40 group-hover:opacity-100 transition-opacity">
-                 <Database size={12} className="text-eu-accent" />
-                 <p className="text-[9px] font-black text-[var(--eu-text-main)] opacity-40 uppercase tracking-[0.2em]">Pages</p>
+           <div className="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 group-hover:border-indigo-200 dark:group-hover:border-indigo-800 transition-colors">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                 <Database size={13} className="text-indigo-600 dark:text-indigo-400" />
+                 <p className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Pages</p>
               </div>
-              <p className="text-3xl font-black tracking-tighter text-white">{report.pagesCrawled || 0}</p>
+              <p className="text-2xl font-black tracking-tight text-slate-900 dark:text-white font-outfit">{report.pagesCrawled || 0}</p>
            </div>
         </div>
 
         {/* Status bar */}
-        <div className="mt-auto pt-6 border-t border-[var(--eu-glass-border)] flex items-center justify-between">
-           <div className="flex flex-col gap-1">
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--eu-text-main)] opacity-40">Sync_Timestamp</p>
-              <p className="text-[12px] font-black text-[var(--eu-text-main)] opacity-40">{new Date(report.scanDate).toLocaleDateString()}</p>
+        <div className="mt-auto pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+           <div className="flex flex-col gap-0.5">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Scan Timestamp</p>
+              <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">{new Date(report.scanDate).toLocaleDateString('en-GB')}</p>
            </div>
-           <div className="size-10 rounded-2xl bg-[var(--eu-bg-void)] flex items-center justify-center text-eu-accent/40 group-hover:bg-eu-accent group-hover:text-white transition-all duration-700 shadow-neon">
-              <ChevronRight size={18} className="group-hover:translate-x-0.5 transition-transform" />
+           <div className="size-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 group-hover:bg-indigo-600 group-hover:text-white transition-all">
+              <ChevronRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
            </div>
         </div>
       </div>

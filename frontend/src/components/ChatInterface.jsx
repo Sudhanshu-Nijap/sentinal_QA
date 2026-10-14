@@ -476,24 +476,31 @@ const ChatInterface = ({
   const grouped = groupMessagesByDate(messages);
 
   const WelcomeHero = () => (
-    <div className="flex flex-col items-center justify-center h-full min-h-[400px] max-w-md mx-auto text-center space-y-6">
+    <div className="flex flex-col items-center justify-center h-full min-h-[420px] max-w-xl mx-auto text-center space-y-6">
       <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-        className="size-14 bg-primary/10 rounded-2xl flex items-center justify-center border border-primary/20 shadow-neon relative overflow-hidden">
-        <Shield className="text-primary size-6 z-10" />
-        <motion.div animate={{ y: [-30, 30] }} transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-          className="absolute inset-x-0 h-1 bg-primary/40 blur-sm" />
+        className="size-16 bg-indigo-50 dark:bg-indigo-950/60 rounded-2xl flex items-center justify-center border border-indigo-200 dark:border-indigo-800 shadow-sm relative overflow-hidden">
+        <Shield className="text-indigo-600 dark:text-indigo-400 size-8 z-10" />
       </motion.div>
       <div>
-        <h1 className="text-lg font-black uppercase tracking-tighter text-[var(--eu-text-main)] italic">Neural QA Hub</h1>
-        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-primary opacity-40 mt-1">Select or Enter a Target Topology</p>
+        <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Autonomous Senior QA Engine</h1>
+        <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 mt-2 max-w-md mx-auto leading-relaxed">
+          Autonomous end-to-end testing replacing manual QA. Executes boundary fuzzing, mobile viewport stress, Core Web Vitals, and token security scans.
+        </p>
       </div>
 
-
-      <div className="grid grid-cols-2 gap-3 w-full text-left">
-        {[['Console/Net', 'Diagnostic'], ['Accessibility', 'Neural Audit'], ['UI Layout', 'Visual QA'], ['Live Monitoring', 'Sentinel Flow']].map(([t, s]) => (
-          <div key={t} className="p-3 bg-[var(--eu-bg-card)] border border-[var(--eu-glass-border)] rounded-xl opacity-40">
-            <p className="text-[9px] font-black uppercase tracking-widest text-[var(--eu-text-main)] mb-0.5">{t}</p>
-            <p className="text-[7px] text-[var(--eu-text-main)] opacity-30 font-mono uppercase">{s}</p>
+      <div className="grid grid-cols-2 gap-3.5 w-full text-left">
+        {[
+          ['Edge-Case Fuzzing', 'SQLi, XSS, Boundary Value Matrix', 'TC-FUZZ'],
+          ['Responsive Matrix', 'Mobile Viewport Stress (375x667)', 'TC-RESP'],
+          ['Core Web Vitals', 'DOM, CLS, LCP Optimization', 'TC-PERF'],
+          ['Enterprise Secret Sniffer', '35+ Signatures & Entropy Check', 'TC-SEC']
+        ].map(([t, s, tag]) => (
+          <div key={t} className="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm hover:border-indigo-400 hover:shadow-md transition-all group">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">{t}</p>
+              <span className="text-[9px] font-mono font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950 px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-800">{tag}</span>
+            </div>
+            <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium">{s}</p>
           </div>
         ))}
       </div>
@@ -501,26 +508,26 @@ const ChatInterface = ({
   );
 
   return (
-    <div className="flex flex-col h-full glass-node relative font-inter">
+    <div className="flex flex-col h-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm relative font-inter overflow-hidden">
       {/* ── Header ── */}
       {!isScheduleView && (
-        <div className="px-4 py-3 border-b border-[var(--eu-glass-border)] flex items-center gap-3 bg-[var(--eu-bg-void)] z-10">
-          <div className="p-1.5 border border-[var(--eu-glass-border)] rounded-xl bg-[var(--eu-bg-void)] flex items-center justify-center">
-            <Bot size={18} className="text-[var(--eu-text-main)] opacity-60" />
+        <div className="px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3 bg-slate-50/70 dark:bg-slate-900/70 z-10">
+          <div className="p-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center shadow-sm">
+            <Bot size={18} className="text-indigo-600 dark:text-indigo-400" />
           </div>
           <div className="flex-1 min-w-0">
             {chatMeta ? (
               <>
-                <p className="text-[11px] font-black text-[var(--eu-text-main)] truncate uppercase tracking-tight">
+                <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
                   {chatMeta.customName || (() => {
                     try { return new URL(chatMeta.url).hostname; }
                     catch (e) { return chatMeta.url; }
                   })()}
                 </p>
-                <p className="hidden md:block text-[8px] text-slate-500 font-mono truncate">{chatMeta.url}</p>
+                <p className="hidden md:block text-[10px] text-slate-500 font-mono truncate">{chatMeta.url}</p>
               </>
             ) : (
-              <p className="text-[11px] font-black text-[var(--eu-text-main)] opacity-50 uppercase tracking-tight">New Session</p>
+              <p className="text-xs font-bold text-slate-800 dark:text-slate-200">New QA Testing Session</p>
             )}
           </div>
 
@@ -679,21 +686,21 @@ const ChatInterface = ({
 
       {/* ── Footer / Input ── */}
       {activeView === 'qa' && (
-        <div className="p-3 bg-[var(--eu-bg-void)] z-10 border-t border-[var(--eu-glass-border)]">
+        <div className="p-4 bg-slate-50/90 dark:bg-slate-900/90 z-10 border-t border-slate-200 dark:border-slate-800">
           {/* Scan params (always visible to allow reconfiguring for rescans) */}
-          <div className="max-w-5xl mx-auto mb-3 space-y-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/5">
+          <div className="max-w-5xl mx-auto mb-3 space-y-2.5">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <div className="flex items-center gap-1 bg-white dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
                 {['single', 'site'].map(s => (
                   <button key={s} onClick={() => setScanParams(p => ({ ...p, scope: s }))}
-                    className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${scanParams.scope === s ? 'bg-primary text-white shadow-neon' : 'text-[var(--eu-text-muted)] hover:text-white'}`}>
-                    {s === 'single' ? 'Single Page' : 'Full Site'}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${scanParams.scope === s ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-700 dark:text-slate-300 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
+                    {s === 'single' ? 'Single URL' : 'Entire Website Crawl'}
                   </button>
                 ))}
               </div>
               <button onClick={() => setShowSensors(o => !o)}
-                className={`px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-neon ${showSensors ? 'bg-primary border border-primary text-white' : 'bg-[var(--eu-bg-void)] border border-white/10 text-primary hover:bg-white/5'}`}>
-                Sensors ({scanParams.tests.length}) <ChevronUp size={11} className={`transition-transform ${showSensors ? 'rotate-180' : ''}`} />
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm ${showSensors ? 'bg-indigo-600 border border-indigo-600 text-white' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
+                Audit Sensors ({scanParams.tests.length}) <ChevronUp size={13} className={`transition-transform ${showSensors ? 'rotate-180' : ''}`} />
               </button>
             </div>
             <AnimatePresence>
@@ -705,10 +712,10 @@ const ChatInterface = ({
                     const on = scanParams.tests.includes(test);
                     return (
                       <button key={test} onClick={() => toggleTest(test)}
-                        className={`p-2 rounded-xl transition-all border text-[8px] font-black uppercase tracking-widest flex items-center justify-between gap-1 ${on ? 'bg-primary/10 text-primary border-primary/30' : 'bg-white/5 text-[var(--eu-text-muted)] border-transparent hover:border-white/10'}`}>
+                        className={`p-2.5 rounded-xl transition-all border text-xs font-bold flex items-center justify-between gap-1.5 ${on ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-700' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300'}`}>
                         {labels[test]}
-                        <div className={`size-3 rounded-full border flex items-center justify-center ${on ? 'bg-primary border-primary' : 'border-slate-600'}`}>
-                          {on && <Check size={7} strokeWidth={4} />}
+                        <div className={`size-3.5 rounded-full border flex items-center justify-center ${on ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-400'}`}>
+                          {on && <Check size={8} strokeWidth={4} />}
                         </div>
                       </button>
                     );
@@ -723,13 +730,13 @@ const ChatInterface = ({
               type="text"
               value={input}
               onChange={e => setInput(e.target.value)}
-              placeholder={activeChatId ? 'Ask a question about this scan... (e.g. "what are the broken links?")' : 'Enter a URL to scan (e.g. example.com)...'}
+              placeholder={activeChatId ? 'Ask Senior QA a question about this scan... (e.g. "what are the critical security bugs?")' : 'Enter a website URL to start autonomous QA audit (e.g. https://example.com)...'}
               disabled={isScanning}
-              className="w-full bg-[var(--eu-bg-card)] border-none rounded-xl py-3 px-6 pr-14 text-[11px] text-[var(--eu-text-main)] focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all placeholder:text-[var(--eu-text-main)] placeholder:opacity-20 disabled:opacity-50"
+              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl py-3 px-5 pr-14 text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-sm transition-all placeholder:text-slate-400 disabled:opacity-50"
             />
             <button type="submit" disabled={!input.trim() || isTyping || isScanning}
-              className={`absolute right-4 top-1/2 -translate-y-1/2 p-1.5 transition-all ${input.trim() && !isTyping && !isScanning ? 'text-primary hover:scale-110' : 'text-[var(--eu-text-main)] opacity-20'}`}>
-              <Send size={18} />
+              className={`absolute right-2.5 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-all ${input.trim() && !isTyping && !isScanning ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm' : 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500'}`}>
+              <Send size={15} />
             </button>
           </form>
         </div>

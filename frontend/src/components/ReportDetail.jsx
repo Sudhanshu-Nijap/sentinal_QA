@@ -12,45 +12,45 @@ import {
 import axios from 'axios';
 
 const StatCard = ({ label, value, color, icon }) => (
-  <div className="glass-euphoria p-4 rounded-2xl border-[var(--eu-glass-border)] relative overflow-hidden group">
-    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-20 transition-all duration-700 group-hover:scale-110">{icon}</div>
-    <p className="text-[9px] text-[var(--eu-text-main)] opacity-40 font-black uppercase tracking-[0.2em] mb-2">{label}</p>
+  <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
+    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-all duration-300 group-hover:scale-110 text-slate-900 dark:text-white">{icon}</div>
+    <p className="text-[11px] text-slate-600 dark:text-slate-400 font-bold uppercase tracking-wider mb-1.5">{label}</p>
     <p className={`text-2xl font-black ${color} tracking-tight font-outfit`}>{value}</p>
   </div>
 );
 
 const SectionHeader = ({ title, icon }) => (
-  <div className="flex items-center gap-4 mb-6">
-    <div className="size-10 bg-eu-accent/20 rounded-xl flex items-center justify-center border border-eu-accent/20 shadow-neon text-eu-accent">{icon}</div>
-    <h3 className="text-xl font-black uppercase tracking-tight font-outfit text-[var(--eu-text-main)]">{title} <span className="text-eu-accent italic">Analysis</span></h3>
+  <div className="flex items-center gap-3 mb-6">
+    <div className="size-9 bg-indigo-50 dark:bg-indigo-950/60 rounded-xl flex items-center justify-center border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 shadow-sm">{icon}</div>
+    <h3 className="text-xl font-black tracking-tight font-outfit text-slate-900 dark:text-white">{title} <span className="text-indigo-600 dark:text-indigo-400 font-semibold text-base">Diagnostics</span></h3>
   </div>
 );
 
 const RecommendationCard = ({ title, status, icon, description, statusColor }) => (
-  <div className="glass-euphoria p-5 rounded-2xl border-[var(--eu-glass-border)] group hover:border-eu-accent/30 transition-all duration-700 hover:translate-y-[-4px]">
-    <div className="flex items-start justify-between mb-6">
-      <div className="size-12 bg-[var(--eu-bg-void)]/80 rounded-xl flex items-center justify-center text-[var(--eu-text-main)] opacity-40 group-hover:bg-eu-accent/20 group-hover:text-eu-accent transition-all duration-700 shadow-inner group-hover:shadow-neon text-right">{icon}</div>
-      <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${statusColor} shadow-neon`}>{status}</span>
+  <div className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-700 transition-all duration-300">
+    <div className="flex items-start justify-between mb-4">
+      <div className="size-10 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center text-slate-700 dark:text-slate-300">{icon}</div>
+      <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border ${statusColor}`}>{status}</span>
     </div>
-    <h4 className="text-lg font-black text-[var(--eu-text-main)] mb-2 uppercase tracking-tight font-outfit">{title}</h4>
-    <p className="text-[var(--eu-text-main)] opacity-40 text-xs leading-relaxed font-medium">{description}</p>
+    <h4 className="text-base font-bold text-slate-900 dark:text-white mb-1.5 font-outfit">{title}</h4>
+    <p className="text-slate-700 dark:text-slate-300 text-xs leading-relaxed font-normal">{description}</p>
   </div>
 );
 
 const LighthouseCircle = ({ label, score, delta }) => {
   const getScoreColor = (s) => {
-    if (s >= 90) return 'text-green-500 stroke-green-500';
-    if (s >= 50) return 'text-yellow-500 stroke-yellow-500';
-    return 'text-primary stroke-primary';
+    if (s >= 90) return 'text-emerald-600 stroke-emerald-600 dark:text-emerald-400 dark:stroke-emerald-400';
+    if (s >= 50) return 'text-amber-500 stroke-amber-500 dark:text-amber-400 dark:stroke-amber-400';
+    return 'text-rose-600 stroke-rose-600 dark:text-rose-400 dark:stroke-rose-400';
   };
   const radius = 32;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (score / 100) * circumference;
   return (
-    <div className="flex flex-col items-center gap-4 group">
+    <div className="flex flex-col items-center gap-3 group">
       <div className="relative w-20 h-20">
-        <svg className="w-full h-full transform -rotate-90 filter drop-shadow-[0_0_10px_rgba(var(--eu-accent-rgb),0.3)]">
-          <circle cx="50%" cy="50%" r={radius} fill="transparent" stroke="currentColor" strokeWidth="4" className="text-white/5" />
+        <svg className="w-full h-full transform -rotate-90">
+          <circle cx="50%" cy="50%" r={radius} fill="transparent" stroke="currentColor" strokeWidth="4" className="text-slate-200 dark:text-slate-800" />
           <circle
             cx="50%" cy="50%" r={radius} fill="transparent" stroke="currentColor" strokeWidth="6"
             strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round"
@@ -62,13 +62,13 @@ const LighthouseCircle = ({ label, score, delta }) => {
         </div>
       </div>
       <div className="text-center">
-        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--eu-text-main)] opacity-40 group-hover:opacity-100 transition-opacity">{label}</span>
+        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">{label}</span>
       </div>
       {/* Comparison Delta */}
       {delta !== undefined && delta !== 0 && (
-        <div className={`mt-2 flex items-center justify-center gap-1 font-black text-[10px] uppercase shadow-neon-soft px-3 py-1 rounded-lg border ${delta > 0 ? 'text-green-500 border-green-500/20 bg-green-500/5' : 'text-primary border-primary/20 bg-primary/5'
+        <div className={`mt-1 flex items-center justify-center gap-1 font-bold text-[10px] uppercase px-2.5 py-0.5 rounded-md border ${delta > 0 ? 'text-emerald-700 border-emerald-200 bg-emerald-50 dark:text-emerald-300 dark:border-emerald-800 dark:bg-emerald-950/40' : 'text-rose-700 border-rose-200 bg-rose-50 dark:text-rose-300 dark:border-rose-800 dark:bg-rose-950/40'
           }`}>
-          {delta > 0 ? <Plus size={10} strokeWidth={4} /> : <div className="w-2 h-[2px] bg-primary rounded-full shrink-0" />}
+          {delta > 0 ? <Plus size={10} strokeWidth={3} /> : <div className="w-2 h-[2px] bg-rose-600 rounded-full shrink-0" />}
           {Math.abs(Math.round(delta))}
         </div>
       )}
@@ -243,8 +243,8 @@ const IssueTable = ({ data, columns, setRemediationCode, onAskAI, reportId }) =>
       <table className="w-full text-left border-separate border-spacing-y-2">
         <thead>
           <tr>
-            {columns.map(col => <th key={col} className="pb-3 px-4 text-[8px] font-black text-[var(--eu-text-main)] opacity-40 uppercase tracking-widest">{col}</th>)}
-            {!columns.includes('Outcome') && <th className="pb-3 px-4 text-[8px] font-black text-[var(--eu-text-main)] opacity-40 uppercase tracking-widest text-right">Action</th>}
+            {columns.map(col => <th key={col} className="pb-3 px-4 text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">{col}</th>)}
+            {!columns.includes('Outcome') && <th className="pb-3 px-4 text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider text-right">Action</th>}
           </tr>
         </thead>
         <tbody>
@@ -257,7 +257,7 @@ const IssueTable = ({ data, columns, setRemediationCode, onAskAI, reportId }) =>
               <React.Fragment key={i}>
                 <tr
                   onClick={() => setExpandedRowId(isExpanded ? null : rowId)}
-                  className={`group cursor-pointer transition-all duration-500 ${isExpanded ? 'bg-eu-accent/5 translate-x-1' : 'hover:translate-x-2'}`}
+                  className={`group cursor-pointer transition-all duration-300 ${isExpanded ? 'bg-indigo-50/60 dark:bg-slate-800/80 translate-x-1' : 'hover:bg-slate-50 dark:hover:bg-slate-850'}`}
                 >
                   {columns.map(col => {
                     const columnToKey = { 'Form Selector': 'formSelector', 'Scan Date': 'scanDate', 'Fix Guide': 'recommendation' };
@@ -270,12 +270,12 @@ const IssueTable = ({ data, columns, setRemediationCode, onAskAI, reportId }) =>
                       const is4xx = statusNum >= 400 && statusNum < 500;
                       const is2xx = statusNum >= 200 && statusNum < 400;
                       return (
-                        <td key={col} className="py-3 px-4 glass-euphoria first:rounded-l-xl last:rounded-r-xl border-y border-[var(--eu-glass-border)] first:border-l last:border-r">
-                          <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black font-mono shadow-neon border ${
-                            is5xx ? 'bg-red-500/20 text-red-400 border-red-500/40 animate-pulse' :
-                            is4xx ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' :
-                            is2xx ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' :
-                            'bg-primary/10 text-primary border-primary/20'
+                        <td key={col} className="py-3.5 px-4 bg-white dark:bg-slate-900 first:rounded-l-xl last:rounded-r-xl border-y border-slate-200 dark:border-slate-800 first:border-l last:border-r shadow-xs">
+                          <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold font-mono border ${
+                            is5xx ? 'bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800' :
+                            is4xx ? 'bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800' :
+                            is2xx ? 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800' :
+                            'bg-indigo-50 text-indigo-700 border-indigo-200'
                           }`}>{value || '---'}</span>
                         </td>
                       );
@@ -283,20 +283,19 @@ const IssueTable = ({ data, columns, setRemediationCode, onAskAI, reportId }) =>
 
                     if (col === 'Context') {
                       return (
-                        <td key={col} className="py-3 px-4 glass-euphoria first:rounded-l-xl last:rounded-r-xl border-y border-[var(--eu-glass-border)] first:border-l last:border-r">
+                        <td key={col} className="py-3.5 px-4 bg-white dark:bg-slate-900 first:rounded-l-xl last:rounded-r-xl border-y border-slate-200 dark:border-slate-800 first:border-l last:border-r shadow-xs">
                           <div className="flex items-center gap-2">
-                            <div className="size-1.5 rounded-full bg-eu-accent animate-pulse" />
-                            <span className="text-[10px] font-black uppercase text-white/90 tracking-widest">{value || 'Main Layout'}</span>
+                            <div className="size-2 rounded-full bg-indigo-600 animate-pulse" />
+                            <span className="text-xs font-bold uppercase text-slate-800 dark:text-slate-200 tracking-wider">{value || 'Main Layout'}</span>
                           </div>
                         </td>
                       );
                     }
 
                     if (col === 'RiskLevel' || col === 'Outcome') {
-                      const isSecure = value === 'Secure' || value === 'System Resilience';
                       return (
-                        <td key={col} className="py-3 px-4 glass-euphoria first:rounded-l-xl last:rounded-r-xl border-y border-[var(--eu-glass-border)] first:border-l last:border-r">
-                          <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase shadow-neon bg-primary/10 text-primary border border-primary/20`}>{value}</span>
+                        <td key={col} className="py-3.5 px-4 bg-white dark:bg-slate-900 first:rounded-l-xl last:rounded-r-xl border-y border-slate-200 dark:border-slate-800 first:border-l last:border-r shadow-xs">
+                          <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800`}>{value}</span>
                         </td>
                       );
                     }
@@ -307,12 +306,12 @@ const IssueTable = ({ data, columns, setRemediationCode, onAskAI, reportId }) =>
                       const isHigh = sevStr.includes('high');
                       const isMed = sevStr.includes('med');
                       return (
-                        <td key={col} className="py-3 px-4 glass-euphoria first:rounded-l-xl last:rounded-r-xl border-y border-[var(--eu-glass-border)] first:border-l last:border-r">
-                          <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase shadow-neon border tracking-wider font-outfit ${
-                            isCrit ? 'bg-red-500/20 text-red-400 border-red-500/40 shadow-[0_0_12px_rgba(239,68,68,0.35)] animate-pulse' :
-                            isHigh ? 'bg-orange-500/20 text-orange-400 border-orange-500/40 shadow-[0_0_10px_rgba(249,115,22,0.3)]' :
-                            isMed ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' :
-                            'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                        <td key={col} className="py-3.5 px-4 bg-white dark:bg-slate-900 first:rounded-l-xl last:rounded-r-xl border-y border-slate-200 dark:border-slate-800 first:border-l last:border-r shadow-xs">
+                          <span className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase border tracking-wider font-outfit ${
+                            isCrit ? 'bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-800' :
+                            isHigh ? 'bg-orange-50 text-orange-700 border-orange-300 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-800' :
+                            isMed ? 'bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800' :
+                            'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800'
                           }`}>{value || row.severity || 'Medium'}</span>
                         </td>
                       );
@@ -320,25 +319,25 @@ const IssueTable = ({ data, columns, setRemediationCode, onAskAI, reportId }) =>
 
                     if (col === 'Issue' || col === 'Message' || col === 'Link') {
                       return (
-                        <td key={col} className="py-3 px-4 glass-euphoria first:rounded-l-xl last:rounded-r-xl border-y border-white/5 first:border-l last:border-r max-w-md">
+                        <td key={col} className="py-3.5 px-4 bg-white dark:bg-slate-900 first:rounded-l-xl last:rounded-r-xl border-y border-slate-200 dark:border-slate-800 first:border-l last:border-r shadow-xs max-w-md">
                           <div className="flex flex-col gap-1">
                             <div className="flex flex-wrap items-center gap-1.5">
                               {row.testCaseId && (
-                                <span className="px-1.5 py-0.5 rounded bg-eu-accent/15 text-eu-accent text-[8px] font-black uppercase tracking-wider border border-eu-accent/30 font-mono shrink-0">
+                                <span className="px-1.5 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold uppercase tracking-wider border border-indigo-200 dark:border-indigo-800 font-mono shrink-0">
                                   {row.testCaseId}
                                 </span>
                               )}
                               {row._occurrences > 1 && (
-                                <span className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[8px] font-black uppercase tracking-wider border border-amber-500/40 shrink-0">
+                                <span className="px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 text-[10px] font-bold uppercase tracking-wider border border-amber-300 dark:border-amber-700 shrink-0">
                                   x{row._occurrences}
                                 </span>
                               )}
-                              <span className="text-[11px] font-bold text-[var(--eu-text-main)] opacity-90 break-words leading-snug font-outfit">
+                              <span className="text-xs font-bold text-slate-900 dark:text-white break-words leading-snug font-outfit">
                                 {value || '---'}
                               </span>
                             </div>
                             {row.expected && (
-                              <span className="text-[9px] text-slate-400 font-medium truncate max-w-sm">
+                              <span className="text-[11px] text-slate-600 dark:text-slate-400 font-medium truncate max-w-sm">
                                 Expected: {row.expected}
                               </span>
                             )}
@@ -429,29 +428,29 @@ const IssueTable = ({ data, columns, setRemediationCode, onAskAI, reportId }) =>
 
                           <div className="flex-1 space-y-6">
                             {/* Test Case & Severity Header */}
-                            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/5 pb-4">
+                            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
                               <div className="flex items-center gap-3">
-                                <div className="size-8 bg-eu-accent/20 rounded-lg flex items-center justify-center text-eu-accent border border-eu-accent/20">
+                                <div className="size-8 bg-indigo-50 dark:bg-indigo-950/60 rounded-lg flex items-center justify-center text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
                                   <Shield size={14} />
                                 </div>
                                 <div>
                                   <div className="flex items-center gap-2">
                                     {row.testCaseId && (
-                                      <span className="px-2 py-0.5 rounded bg-eu-accent/20 text-eu-accent text-[10px] font-mono font-black border border-eu-accent/30 tracking-wider">
+                                      <span className="px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 text-[10px] font-mono font-bold border border-indigo-200 dark:border-indigo-800 tracking-wider">
                                         {row.testCaseId}
                                       </span>
                                     )}
-                                    <h4 className="text-sm font-black uppercase tracking-widest text-[var(--eu-text-main)] font-outfit">
+                                    <h4 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white font-outfit">
                                       {row.type || 'Diagnostic Dossier'}
                                     </h4>
                                   </div>
-                                  <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                                  <p className="text-xs text-slate-600 dark:text-slate-400 font-medium mt-0.5">
                                     {row.issue || row.message || 'System diagnostic finding'}
                                   </p>
                                 </div>
                               </div>
                               {row._occurrences > 1 && (
-                                <span className="px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-black uppercase tracking-widest">
+                                <span className="px-3 py-1 rounded-full bg-amber-50 border border-amber-300 text-amber-800 dark:bg-amber-950/50 dark:border-amber-700 dark:text-amber-300 text-[10px] font-bold uppercase tracking-wider">
                                   Occurrences: {row._occurrences}x ({row._affectedLocations?.length || 1} locations)
                                 </span>
                               )}
@@ -460,19 +459,19 @@ const IssueTable = ({ data, columns, setRemediationCode, onAskAI, reportId }) =>
                             {/* Expected vs Observed Behavior */}
                             {(row.expected || row.observed) && (
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="p-4 rounded-2xl bg-emerald-500/[0.04] border border-emerald-500/20 space-y-1.5">
-                                  <span className="text-[9px] font-black uppercase tracking-widest text-emerald-400 font-outfit flex items-center gap-1.5">
-                                    <CheckCircle2 size={12} /> Expected Behavior
+                                <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 space-y-1.5">
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 font-outfit flex items-center gap-1.5">
+                                    <CheckCircle2 size={13} /> Expected Behavior
                                   </span>
-                                  <p className="text-xs text-slate-300 leading-relaxed font-medium">
+                                  <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed font-medium">
                                     {row.expected || 'Target element should comply with standard UX, boundary validation, and security guidelines.'}
                                   </p>
                                 </div>
-                                <div className="p-4 rounded-2xl bg-red-500/[0.04] border border-red-500/20 space-y-1.5">
-                                  <span className="text-[9px] font-black uppercase tracking-widest text-red-400 font-outfit flex items-center gap-1.5">
-                                    <AlertTriangle size={12} /> Actual Observed
+                                <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 space-y-1.5">
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-red-700 dark:text-red-400 font-outfit flex items-center gap-1.5">
+                                    <AlertTriangle size={13} /> Actual Observed
                                   </span>
-                                  <p className="text-xs text-slate-300 leading-relaxed font-medium">
+                                  <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed font-medium">
                                     {row.observed || row.issue || row.message || 'Non-standard runtime, layout shift, or boundary failure observed.'}
                                   </p>
                                 </div>
@@ -480,49 +479,49 @@ const IssueTable = ({ data, columns, setRemediationCode, onAskAI, reportId }) =>
                             )}
 
                             {/* Root Cause & Technical Impact */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                              <div className="space-y-2">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--eu-text-main)] opacity-40 font-outfit">Root Cause</p>
-                                <p className="text-xs text-[var(--eu-text-main)] opacity-80 font-medium leading-relaxed italic">"{remediation.cause}"</p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div className="space-y-1.5">
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 font-outfit">Root Cause</p>
+                                <p className="text-xs text-slate-800 dark:text-slate-200 font-medium leading-relaxed italic bg-slate-50 dark:bg-slate-800/50 p-3 rounded-lg border border-slate-200 dark:border-slate-700">"{remediation.cause}"</p>
                               </div>
-                              <div className="space-y-2">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-primary font-outfit">Security / UX / Performance Impact</p>
-                                <p className="text-xs text-[var(--eu-text-main)] opacity-80 font-medium leading-relaxed italic">"{remediation.impact}"</p>
+                              <div className="space-y-1.5">
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 font-outfit">Security / UX / Performance Impact</p>
+                                <p className="text-xs text-slate-800 dark:text-slate-200 font-medium leading-relaxed italic bg-indigo-50/50 dark:bg-indigo-950/30 p-3 rounded-lg border border-indigo-100 dark:border-indigo-900">"{remediation.impact}"</p>
                               </div>
                             </div>
 
                             {/* Reproduction Steps */}
-                            <div className="p-4 bg-white/[0.02] rounded-2xl border border-white/5 space-y-2">
-                              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 font-outfit">Steps to Reproduce</p>
-                              <div className="space-y-1.5 text-xs text-slate-300 font-mono">
+                            <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-outfit">Steps to Reproduce</p>
+                              <div className="space-y-1.5 text-xs text-slate-800 dark:text-slate-200 font-mono">
                                 <div className="flex items-center gap-2">
-                                  <span className="size-4 rounded-full bg-white/10 text-[9px] flex items-center justify-center font-bold">1</span>
-                                  <span>Navigate to: <code className="text-eu-accent">{row.page || 'target URL'}</code></span>
+                                  <span className="size-4 rounded-full bg-slate-200 dark:bg-slate-700 text-[10px] flex items-center justify-center font-bold text-slate-700 dark:text-slate-200">1</span>
+                                  <span>Navigate to: <code className="text-indigo-600 dark:text-indigo-400 font-bold">{row.page || 'target URL'}</code></span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <span className="size-4 rounded-full bg-white/10 text-[9px] flex items-center justify-center font-bold">2</span>
-                                  <span>Locate target: <code className="text-white/80">{row.selector || row.location || row.form || 'viewport'}</code></span>
+                                  <span className="size-4 rounded-full bg-slate-200 dark:bg-slate-700 text-[10px] flex items-center justify-center font-bold text-slate-700 dark:text-slate-200">2</span>
+                                  <span>Locate target: <code className="text-slate-900 dark:text-white font-bold">{row.selector || row.location || row.form || 'viewport'}</code></span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <span className="size-4 rounded-full bg-white/10 text-[9px] flex items-center justify-center font-bold">3</span>
-                                  <span>Observe trigger / payload: <code className="text-amber-300">{row.payload || row.method || 'Default boundary condition'}</code></span>
+                                  <span className="size-4 rounded-full bg-slate-200 dark:bg-slate-700 text-[10px] flex items-center justify-center font-bold text-slate-700 dark:text-slate-200">3</span>
+                                  <span>Observe trigger / payload: <code className="text-amber-700 dark:text-amber-400 font-bold">{row.payload || row.method || 'Default boundary condition'}</code></span>
                                 </div>
                               </div>
                             </div>
 
                             {/* Remediation Intelligence */}
-                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
-                              <p className="text-[9px] font-black uppercase tracking-widest text-eu-accent mb-2 font-outfit">Remediation Intelligence</p>
-                              <p className="text-xs text-[var(--eu-text-main)] opacity-80 font-medium leading-relaxed">{remediation.guide}</p>
+                            <div className="p-4 bg-indigo-50/60 dark:bg-indigo-950/40 rounded-xl border border-indigo-100 dark:border-indigo-900">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-400 mb-1.5 font-outfit">Remediation Intelligence</p>
+                              <p className="text-xs text-slate-800 dark:text-slate-200 font-medium leading-relaxed">{remediation.guide}</p>
                             </div>
 
                             {row.htmlSnippet && row.htmlSnippet !== 'UNAVAILABLE' && (
-                              <div className="p-4 bg-black/40 rounded-2xl border border-white/5 space-y-2">
+                              <div className="p-4 bg-slate-900 rounded-xl border border-slate-800 space-y-2">
                                 <div className="flex items-center gap-2">
-                                  <Code size={12} className="text-eu-accent" />
-                                  <p className="text-[9px] font-black uppercase tracking-widest text-white/40">Target Code Fragment</p>
+                                  <Code size={12} className="text-indigo-400" />
+                                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Target Code Fragment</p>
                                 </div>
-                                <pre className="text-[10px] font-mono text-eu-accent/80 bg-black/20 p-3 rounded-lg border border-white/5 overflow-x-auto whitespace-pre-wrap break-all">
+                                <pre className="text-xs font-mono text-indigo-300 bg-slate-950 p-3 rounded-lg border border-slate-800 overflow-x-auto whitespace-pre-wrap break-all">
                                   <code>{row.htmlSnippet}</code>
                                 </pre>
                               </div>
@@ -531,8 +530,8 @@ const IssueTable = ({ data, columns, setRemediationCode, onAskAI, reportId }) =>
 
                           {/* Protocol Actions Column */}
                           <div className="w-full md:w-64 space-y-4 shrink-0">
-                            <div className="p-4 bg-[var(--eu-bg-void)]/40 rounded-2xl border border-white/5">
-                              <p className="text-[8px] font-black uppercase tracking-widest text-slate-600 mb-3 text-center">Senior QA Actions</p>
+                            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-3 text-center">Senior QA Actions</p>
                               <div className="space-y-2">
                                 <button
                                   onClick={(e) => {
@@ -544,22 +543,22 @@ const IssueTable = ({ data, columns, setRemediationCode, onAskAI, reportId }) =>
                                     setCopiedTicketId(rowId);
                                     setTimeout(() => setCopiedTicketId(null), 2500);
                                   }}
-                                  className="w-full py-2.5 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-neon font-bold"
+                                  className="w-full py-2.5 bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white border border-indigo-200 dark:border-indigo-800 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-sm"
                                 >
                                   {copiedTicketId === rowId ? (
                                     <>
-                                      <Check size={12} className="text-green-400" /> Copied JIRA Ticket!
+                                      <Check size={13} className="text-green-600 dark:text-green-400" /> Copied JIRA Ticket!
                                     </>
                                   ) : (
                                     <>
-                                      <Copy size={12} /> Copy JIRA Bug Ticket
+                                      <Copy size={13} /> Copy JIRA Bug Ticket
                                     </>
                                   )}
                                 </button>
                                 {row.suggestedFix && (
                                   <button
                                     onClick={() => setRemediationCode(row.suggestedFix)}
-                                    className="w-full py-2.5 bg-eu-accent/20 hover:bg-eu-accent text-white border border-eu-accent/30 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-neon"
+                                    className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all shadow-sm"
                                   >
                                     Apply Patch
                                   </button>
@@ -647,19 +646,19 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
   }, [reportId]);
 
   if (loading) return (
-    <div className="flex flex-col items-center justify-center py-40 bg-white/[0.02] border border-dashed border-white/10 rounded-[32px]">
-      <Loader2 className="animate-spin text-primary mb-6" size={48} />
-      <p className="text-text-muted font-bold tracking-widest uppercase text-xs">Decrypting scan protocols...</p>
+    <div className="flex flex-col items-center justify-center py-32 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
+      <Loader2 className="animate-spin text-indigo-600 dark:text-indigo-400 mb-4" size={36} />
+      <p className="text-slate-700 dark:text-slate-300 font-bold uppercase tracking-wider text-xs">Loading diagnostic report...</p>
     </div>
   );
 
   if (!report) return (
-    <div className="glass p-20 text-center rounded-[32px]">
-      <AlertTriangle className="text-red-400 mx-auto mb-6" size={48} />
-      <h3 className="text-2xl font-bold mb-2 text-[var(--eu-text-main)]">Protocol Failure</h3>
-      <p className="text-muted opacity-60">The requested inspection log does not exist or has been purged from the index.</p>
-      <button onClick={onBack} className="mt-8 text-primary font-bold flex items-center gap-2 mx-auto">
-        <ChevronLeft size={18} /> Return to Dashboard
+    <div className="bg-white dark:bg-slate-900 p-16 text-center rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+      <AlertTriangle className="text-amber-500 mx-auto mb-4" size={40} />
+      <h3 className="text-xl font-bold mb-2 text-slate-900 dark:text-white">Report Not Found</h3>
+      <p className="text-slate-600 dark:text-slate-400 text-sm max-w-md mx-auto">The requested inspection log does not exist or has been removed from the database.</p>
+      <button onClick={onBack} className="mt-6 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 mx-auto shadow-sm">
+        <ChevronLeft size={16} /> Return to Dashboard
       </button>
     </div>
   );
@@ -688,14 +687,14 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
 
   return (
     <div className="space-y-8 pb-16">
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
-        <div className="flex items-center gap-8">
-          <button onClick={onBack} className="size-16 glass-euphoria rounded-3xl hover:border-eu-accent/50 transition-all text-muted hover:text-[var(--eu-text-main)] group shadow-neon flex items-center justify-center">
-            <ChevronLeft size={28} className="group-hover:-translate-x-1 transition-transform" />
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+        <div className="flex items-center gap-5">
+          <button onClick={onBack} className="size-11 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-sm flex items-center justify-center transition-all group">
+            <ChevronLeft size={20} className="group-hover:-translate-x-0.5 transition-transform" />
           </button>
           <div>
-            <div className="flex flex-wrap items-center gap-4 sm:gap-6">
-              <h2 className="text-base sm:text-lg md:text-xl font-black premium-gradient-text tracking-[0.2em] uppercase leading-none break-all font-outfit">
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white font-outfit tracking-tight">
                 {(() => {
                   try {
                     return new URL(report.url).hostname;
@@ -704,27 +703,27 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
                   }
                 })()}
               </h2>
-              <span className={`px-5 py-2 rounded-2xl text-[10px] sm:text-[12px] font-black uppercase tracking-[0.3em] border bg-primary/10 border-primary/30 text-primary shadow-neon`}>
+              <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-950 dark:border-indigo-800 dark:text-indigo-300">
                 {report.status}
               </span>
               {(report.securityIssues?.length > 0) && (
-                <span className="px-5 py-2 rounded-2xl text-[10px] sm:text-[12px] font-black uppercase tracking-[0.3em] border bg-red-500/10 border-red-500/30 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.4)] animate-pulse">
-                  SECURITY_CRITICAL
+                <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-950 dark:border-rose-800 dark:text-rose-300">
+                  SECURITY ALERT
                 </span>
               )}
             </div>
-            <div className="mt-4 flex flex-row items-center gap-4 opacity-50">
-              <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
-                <Database size={10} className="text-eu-accent" /> LOG_{report._id.toString().slice(-8).toUpperCase()}
+            <div className="mt-2 flex flex-row items-center gap-4">
+              <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                <Database size={12} className="text-indigo-600 dark:text-indigo-400" /> LOG_{report._id.toString().slice(-8).toUpperCase()}
               </div>
-              <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
-                <span className="opacity-30">//</span> SYNC_{new Date(report.createdAt).toLocaleDateString('en-GB')}
+              <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                <span>//</span> {new Date(report.createdAt).toLocaleDateString('en-GB')}
               </div>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2 w-full lg:w-auto overflow-x-auto pb-2 lg:pb-0 no-scrollbar px-1">
-          {/* Action Hub (Single Line) */}
+        <div className="flex items-center gap-2.5 w-full lg:w-auto overflow-x-auto pb-1 lg:pb-0 no-scrollbar">
+          {/* Action Hub */}
           <button
             onClick={async () => {
               const confirmed = await confirm({
@@ -738,14 +737,14 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
                   await axios.delete(`${API_BASE}/api/report/${reportId}`);
                   if (onDeleted) onDeleted();
                   else onBack();
-                  setAlert({ type: 'success', message: 'Neural trace purged successfully.' });
+                  setAlert({ type: 'success', message: 'Diagnostic log deleted successfully.' });
                 }
-                catch (e) { setAlert({ type: 'error', message: 'Purge failed. Uplink blocked.' }); }
+                catch (e) { setAlert({ type: 'error', message: 'Delete failed. Server unreachable.' }); }
               }
             }}
-            className="flex-none flex items-center justify-center gap-2 bg-primary/10 hover:bg-primary/20 border border-primary/20 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest text-primary transition-all shadow-neon"
+            className="flex-none flex items-center justify-center gap-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 dark:bg-rose-950/40 dark:border-rose-800 text-rose-700 dark:text-rose-300 px-3.5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all"
           >
-            Delete <Trash2 size={10} />
+            <Trash2 size={12} /> Delete
           </button>
 
           <button
@@ -755,9 +754,9 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
                 if (res.data.url) window.open(`${API_BASE}${res.data.url}`, '_blank');
               } catch (e) { setAlert({ type: 'error', message: 'PDF export protocol failed.' }); }
             }}
-            className="flex-none flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all shadow-neon text-white"
+            className="flex-none flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 text-slate-800 dark:text-white px-3.5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all"
           >
-            PDF <BarChart3 size={10} />
+            <BarChart3 size={12} /> Export PDF
           </button>
 
           <button
@@ -772,18 +771,16 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
                 onReScan(report.url, reportId);
               }
             }}
-            className="flex-none flex items-center justify-center gap-2 bg-eu-accent-violet/20 hover:bg-eu-accent-violet/40 border border-eu-accent-violet/30 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest text-[#a78bfa] transition-all shadow-neon"
+            className="flex-none flex items-center justify-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 dark:bg-indigo-950/60 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 px-3.5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all"
           >
-            Rescan <Zap size={10} />
+            <Zap size={12} /> Rescan
           </button>
-
-
 
           <a
             href={report.url} target="_blank" rel="noreferrer"
-            className="flex-none flex items-center justify-center gap-2 bg-eu-accent hover:scale-[1.05] active:scale-[0.98] px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all shadow-neon text-white"
+            className="flex-none flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all text-white shadow-sm"
           >
-            Access <ExternalLink size={10} />
+            Open Target <ExternalLink size={12} />
           </a>
         </div>
       </div>
@@ -803,23 +800,23 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
             )}
 
             {/* Icon Container */}
-            <div className={`size-12 rounded-2xl flex items-center justify-center transition-all duration-700 relative z-10 ${activeTab === tab.id
-                ? 'bg-white/10 text-white shadow-neon border border-white/20 scale-110'
-                : 'bg-white/5 text-[var(--eu-text-main)] opacity-30 group-hover:opacity-100 group-hover:bg-white/10'
+            <div className={`size-11 rounded-xl flex items-center justify-center transition-all duration-300 relative z-10 ${activeTab === tab.id
+                ? 'bg-indigo-600 text-white shadow-sm scale-105'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 group-hover:bg-slate-200/80 group-hover:text-slate-900'
               }`}>
               {tab.icon}
             </div>
 
             {/* Label & Status Hub */}
             <div className="text-center relative z-10 mt-1">
-              <p className={`text-[9px] font-black uppercase tracking-[0.2em] mb-3 transition-all duration-500 neon-text-glow ${activeTab === tab.id ? 'text-white' : 'text-[var(--eu-text-main)] opacity-40'
+              <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 transition-all ${activeTab === tab.id ? 'text-indigo-600 dark:text-indigo-400 font-extrabold' : 'text-slate-700 dark:text-slate-300 group-hover:text-slate-900'
                 }`}>
                 {tab.label}
               </p>
 
               {tab.count !== undefined && (
-                <div className={`inline-flex items-center justify-center count-badge-premium ${tab.count > 0 ? 'text-eu-accent' : 'text-slate-600'}`}>
-                  <span className="text-[14px] leading-none pt-0.5">
+                <div className={`inline-flex items-center justify-center px-2 py-0.5 rounded-md text-xs font-bold border ${activeTab === tab.id ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-950 dark:border-indigo-800 dark:text-indigo-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}>
+                  <span>
                     {tab.count < 10 ? `0${tab.count}` : tab.count}
                   </span>
                 </div>
@@ -830,7 +827,7 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
             {activeTab === tab.id && (
               <motion.div
                 layoutId="active-nav-glow"
-                className="absolute inset-x-0 bottom-0 h-1 bg-eu-accent shadow-neon-strong"
+                className="absolute inset-x-0 bottom-0 h-1 bg-indigo-600 shadow-sm"
               />
             )}
           </button>
@@ -844,268 +841,219 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
 
               {/* ── Scan In Progress Banner ── */}
               {report.status !== 'completed' && (
-                <motion.div animate={{ opacity: [0.7, 1, 0.7] }} transition={{ duration: 2, repeat: Infinity }} className="flex items-center gap-6 p-8 rounded-[32px] border border-eu-accent/30 bg-eu-accent/5 shadow-neon">
-                  <Loader2 size={28} className="text-eu-accent animate-spin shrink-0" />
+                <motion.div animate={{ opacity: [0.8, 1, 0.8] }} transition={{ duration: 2, repeat: Infinity }} className="flex items-center gap-5 p-6 rounded-2xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/70 dark:bg-indigo-950/40 shadow-sm">
+                  <Loader2 size={24} className="text-indigo-600 dark:text-indigo-400 animate-spin shrink-0" />
                   <div>
-                    <p className="text-sm font-black text-white uppercase tracking-[0.2em] font-outfit">Active Neural Crawl</p>
-                    <p className="text-xs text-[var(--eu-text-muted)] mt-1 font-medium">Sentinel AI is navigating the DOM tree and harvesting diagnostic signatures. Data will stream in real-time.</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider font-outfit">Active Diagnostic Crawl</p>
+                    <p className="text-xs text-slate-700 dark:text-slate-300 mt-0.5 font-medium">Sentinel AI is traversing the DOM tree and harvesting diagnostic signatures. Data streams in real-time.</p>
                   </div>
-                  <div className="ml-auto px-4 py-1.5 rounded-xl bg-eu-accent/20 border border-eu-accent/20 text-[10px] font-black text-eu-accent uppercase tracking-widest animate-pulse font-outfit">Status: {report.status}</div>
+                  <div className="ml-auto px-3 py-1 rounded-lg bg-indigo-100 dark:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800 text-[10px] font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider font-outfit">Status: {report.status}</div>
                 </motion.div>
               )}
 
               {/* ── Neural Analysis Hub (AI Insights) ── */}
               {report.aiInsights ? (
-                <div className="relative group overflow-hidden rounded-[40px]">
-                  <div className="absolute inset-0 bg-gradient-to-br from-eu-accent/20 via-transparent to-transparent opacity-50" />
-                  <div className="relative glass-euphoria p-8 md:p-14 rounded-[40px] border-white/10">
-                    <div className="flex flex-col md:flex-row gap-8 items-start md:items-center mb-10">
-                      <div className="relative shrink-0 p-10 bg-[var(--eu-bg-void)] border border-eu-accent/30 rounded-[40px] shadow-neon">
-                        <Cpu size={72} className="text-eu-accent animate-pulse" />
-                      </div>
-                      <div className="flex-1 space-y-5">
-                        <div className="flex flex-wrap items-center gap-4">
-                          <div className="px-3 py-1.5 bg-eu-accent text-[10px] font-black uppercase tracking-[0.3em] rounded-xl shadow-neon text-white font-outfit">Autonomous QA Audit</div>
-                          {report.aiInsights?.qaVerdict && (
-                            <div className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-[0.25em] font-outfit border shadow-neon ${
-                              report.aiInsights.qaVerdict.includes('BLOCK') 
-                                ? 'bg-red-500/20 border-red-500/50 text-red-400 animate-pulse'
-                                : report.aiInsights.qaVerdict.includes('CONDITIONAL')
-                                ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
-                                : 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
-                            }`}>
-                              {report.aiInsights.qaVerdict.includes('BLOCK') ? '🛑' : report.aiInsights.qaVerdict.includes('CONDITIONAL') ? '⚠️' : '✅'} Verdict: {report.aiInsights.qaVerdict}
-                            </div>
-                          )}
-                          <div className="px-3 py-1.5 bg-white/5 border border-white/5 text-[10px] font-black uppercase tracking-[0.3em] rounded-xl text-slate-500 font-outfit">{report.url}</div>
-                        </div>
-
-                        {/* ── Autonomous QA Test Suite Coverage Matrix ── */}
-                        <div className="flex flex-wrap items-center gap-2 pt-1 pb-2">
-                          <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 font-outfit">Suite Matrix:</span>
-                          <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[9px] font-bold text-slate-300">📱 Viewports (375px/768px/1280px)</span>
-                          <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[9px] font-bold text-slate-300">🛡️ Fuzzing & Boundaries</span>
-                          <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[9px] font-bold text-slate-300">⚡ Dead-Clicks & Crashes</span>
-                          <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[9px] font-bold text-slate-300">🔐 Storage & Secret Sniffer</span>
-                          <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[9px] font-bold text-slate-300">🚀 Asset & DOM Bloat</span>
-                        </div>
-                        {report.comparison && report.comparison.previousReportId && (
-                          <div className="flex flex-wrap items-center gap-3 mb-6">
-                            <div className="px-4 py-2 bg-eu-accent/10 border border-eu-accent/30 rounded-2xl flex items-center gap-3 shadow-neon">
-                              <Activity size={14} className="text-eu-accent" />
-                              <div className="flex flex-col">
-                                <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">Neural Progression</span>
-                                <div className="flex items-center gap-2">
-                                  <span className={`text-sm font-black uppercase ${report.comparison.scoreDelta >= 0 ? 'text-green-500' : 'text-primary'}`}>
-                                    {report.comparison.scoreDelta >= 0 ? '+' : ''}{report.comparison.scoreDelta} HP
-                                  </span>
-                                  <span className="text-[10px] font-bold text-slate-400 opacity-60 italic">vs. Baseline Matrix</span>
-                                </div>
-                              </div>
-                            </div>
-
-                            {report.comparison.stats && (
-                              <div className="flex items-center gap-3 px-4 py-2 bg-white/5 border border-white/10 rounded-2xl">
-                                <div className="flex flex-col border-r border-white/10 pr-4">
-                                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">Neutralized</span>
-                                  <span className="text-sm font-black text-green-500">{report.comparison.stats.fixedErrors}</span>
-                                </div>
-                                <div className="flex flex-col pl-1">
-                                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">Invasive</span>
-                                  <span className="text-sm font-black text-primary">{report.comparison.stats.newErrors}</span>
-                                </div>
-                              </div>
-                            )}
-
-                            <div className={`px-4 py-2 rounded-2xl border flex items-center gap-2 ${report.comparison.stats?.impact === 'Improved' ? 'bg-green-500/10 border-green-500/30 text-green-500 shadow-neon' :
-                                report.comparison.stats?.impact === 'Regressed' ? 'bg-primary/10 border-primary/30 text-primary shadow-neon' :
-                                  'bg-white/5 border-white/10 text-slate-500'
-                              }`}>
-                              <p className="text-[10px] font-black uppercase tracking-widest">{report.comparison.stats?.impact || 'Stable State'}</p>
-                            </div>
+                <div className="relative group overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm p-6 md:p-10">
+                  <div className="flex flex-col md:flex-row gap-6 items-start md:items-center mb-8 pb-8 border-b border-slate-200 dark:border-slate-800">
+                    <div className="relative shrink-0 p-5 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 rounded-2xl text-indigo-600 dark:text-indigo-400">
+                      <Cpu size={40} className="animate-pulse" />
+                    </div>
+                    <div className="flex-1 space-y-3">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="px-3 py-1 bg-indigo-600 text-[10px] font-bold uppercase tracking-wider rounded-lg text-white font-outfit">Autonomous QA Audit</div>
+                        {report.aiInsights?.qaVerdict && (
+                          <div className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider font-outfit border ${
+                            report.aiInsights.qaVerdict.includes('BLOCK') 
+                              ? 'bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-950/50 dark:border-rose-800 dark:text-rose-300'
+                              : report.aiInsights.qaVerdict.includes('CONDITIONAL')
+                              ? 'bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-950/50 dark:border-amber-800 dark:text-amber-300'
+                              : 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950/50 dark:border-emerald-800 dark:text-emerald-300'
+                          }`}>
+                            {report.aiInsights.qaVerdict.includes('BLOCK') ? '🛑' : report.aiInsights.qaVerdict.includes('CONDITIONAL') ? '⚠️' : '✅'} Verdict: {report.aiInsights.qaVerdict}
                           </div>
                         )}
-                        <h3 className="text-2xl md:text-4xl font-black uppercase tracking-tight text-[var(--eu-text-main)] leading-[1.1] font-outfit">
-                          {report.status === 'completed' ? 'Analysis Completed' : report.status === 'in-progress' ? 'Analysis in Progress' : report.aiInsights?.classification || 'Neutral State Detected'}
-                        </h3>
-                        <p className="text-slate-300 text-xl md:text-2xl leading-relaxed font-medium font-outfit opacity-90 italic">
-                          "{report.aiInsights.summary || 'Scan data is being synthesized into narrative insights...'}"
-                        </p>
+                        <div className="px-3 py-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[10px] font-bold uppercase tracking-wider rounded-lg text-slate-700 dark:text-slate-300 font-outfit">{report.url}</div>
                       </div>
+
+                      {/* ── Autonomous QA Test Suite Coverage Matrix ── */}
+                      <div className="flex flex-wrap items-center gap-2 pt-1 pb-1">
+                        <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-outfit">Coverage:</span>
+                        <span className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200">📱 Viewports (375px/768px/1280px)</span>
+                        <span className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200">🛡️ Fuzzing & Boundaries</span>
+                        <span className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200">⚡ Dead-Clicks & Crashes</span>
+                        <span className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200">🔐 Storage & Secret Sniffer</span>
+                        <span className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200">🚀 Asset & DOM Bloat</span>
+                      </div>
+
+                      <h3 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-white leading-tight font-outfit">
+                        {report.status === 'completed' ? 'Diagnostic Analysis Summary' : report.status === 'in-progress' ? 'Analysis in Progress' : report.aiInsights?.classification || 'Standard Execution State'}
+                      </h3>
+                      <p className="text-slate-700 dark:text-slate-300 text-base md:text-lg leading-relaxed font-normal">
+                        "{report.aiInsights.summary || 'Scan data is being synthesized into narrative insights...'}"
+                      </p>
                     </div>
+                  </div>
 
-                    <div className="space-y-8">
-                      {/* Issue Cards */}
-                      {report.aiInsights.issues?.length > 0 ? (
-                        <div className="space-y-8">
-                          <div className="text-[12px] font-black text-eu-accent uppercase tracking-[0.4em] flex items-center gap-4 pb-4 border-b border-white/5 font-outfit">
-                            <AlertTriangle size={16} /> {report.aiInsights.issues.length} Critical Deviations Found
-                          </div>
-                          <div className="grid grid-cols-1 gap-5">
-                            {report.aiInsights.issues.map((issue, idx) => {
-                              const sc = issue.severity === 'Critical' 
-                                ? 'border-red-500/40 bg-red-500/5 shadow-[0_0_20px_rgba(239,68,68,0.15)]' 
-                                : issue.severity === 'High' 
-                                ? 'border-orange-500/40 bg-orange-500/5 shadow-[0_0_15px_rgba(249,115,22,0.1)]' 
-                                : issue.severity === 'Medium' 
-                                ? 'border-amber-500/30 bg-amber-500/5' 
-                                : 'border-cyan-500/30 bg-cyan-500/5';
-
-                              const sb = issue.severity === 'Critical' 
-                                ? 'bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.5)] animate-pulse' 
-                                : issue.severity === 'High' 
-                                ? 'bg-orange-500 text-white shadow-[0_0_12px_rgba(249,115,22,0.4)]' 
-                                : issue.severity === 'Medium' 
-                                ? 'bg-amber-400 text-black shadow-[0_0_10px_rgba(245,158,11,0.3)]' 
-                                : 'bg-cyan-500 text-black shadow-[0_0_10px_rgba(6,182,212,0.3)]';
-                              return (
-                                <div key={idx} className={`border rounded-[28px] p-6 md:p-8 space-y-6 transition-all hover:translate-x-2 duration-500 ${sc} relative overflow-hidden`}>
-                                  <div className="absolute top-0 right-0 p-4 opacity-5">
-                                    {issue.source === 'local' ? <Database size={48} /> : <Cpu size={48} />}
+                  <div className="space-y-6">
+                    {/* Issue Cards */}
+                    {report.aiInsights.issues?.length > 0 ? (
+                      <div className="space-y-6">
+                        <div className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2 pb-3 border-b border-slate-200 dark:border-slate-800 font-outfit">
+                          <AlertTriangle size={15} className="text-amber-500" /> {report.aiInsights.issues.length} Critical Deviations Detected
+                        </div>
+                        <div className="grid grid-cols-1 gap-4">
+                          {report.aiInsights.issues.map((issue, idx) => {
+                            const isCrit = issue.severity === 'Critical';
+                            const isHigh = issue.severity === 'High';
+                            const isMed = issue.severity === 'Medium';
+                            return (
+                              <div key={idx} className="border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 rounded-xl p-5 md:p-6 space-y-4 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                  <div className="flex items-center gap-3">
+                                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md border ${
+                                      isCrit ? 'bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-950/50 dark:border-rose-800 dark:text-rose-300' :
+                                      isHigh ? 'bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-950/50 dark:border-orange-800 dark:text-orange-300' :
+                                      isMed ? 'bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-950/50 dark:border-amber-800 dark:text-amber-300' :
+                                      'bg-slate-100 border-slate-200 text-slate-700 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-300'
+                                    }`}>
+                                      {issue.severity}
+                                    </span>
+                                    <h4 className="text-base font-bold text-slate-900 dark:text-white font-outfit">{issue.title || issue.issue}</h4>
                                   </div>
-                                  <div className="flex flex-wrap items-center gap-4">
-                                    <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1.5 rounded-xl ${sb} shadow-neon`}>{issue.severity}</span>
-                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
-                                      {issue.source === 'local' ? <Database size={10} className="text-primary" /> : <Cpu size={10} className="text-eu-accent" />}
-                                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--eu-text-muted)] font-outfit">Source: {issue.source === 'local' ? 'Neural Cache' : 'AI Diagnostic'}</span>
-                                    </div>
-                                    <h4 className="text-xl md:text-2xl font-black text-[var(--eu-text-main)] font-outfit tracking-tight">{issue.title || issue.issue}</h4>
-                                  </div>
+                                  <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">Source: {issue.source === 'local' ? 'Neural Cache' : 'AI Diagnostic'}</span>
+                                </div>
 
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="space-y-3">
-                                      <p className="text-[11px] font-black uppercase tracking-[0.3em] text-eu-accent font-outfit">Issue Signature</p>
-                                      <p className="text-base text-slate-300 leading-relaxed font-medium">{issue.issue}</p>
-                                    </div>
-                                    <div className="space-y-3">
-                                      <p className="text-[11px] font-black uppercase tracking-[0.3em] text-primary font-outfit">Neural Root Cause</p>
-                                      <p className="text-base text-slate-300 leading-relaxed font-medium">{issue.reason}</p>
-                                    </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div className="space-y-1">
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 font-outfit">Issue Signature</p>
+                                    <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed font-medium">{issue.issue}</p>
                                   </div>
+                                  <div className="space-y-1">
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 font-outfit">Root Cause</p>
+                                    <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed font-medium">{issue.reason}</p>
+                                  </div>
+                                </div>
 
-                                  <div className="p-6 bg-white/5 rounded-2xl border border-white/5 space-y-4">
-                                    <div className="flex items-center gap-3 mb-2">
-                                      <Terminal size={14} className="text-primary" />
-                                      <p className="text-[11px] font-black uppercase tracking-[0.3em] text-primary font-outfit">Tactical Remediation Steps</p>
-                                    </div>
-                                    <div className="space-y-3">
-                                      {issue.fix?.map((step, sIdx) => (
-                                        <div key={sIdx} className="flex gap-4 items-start">
-                                          <div className="size-5 shrink-0 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-[10px] font-black text-primary">{sIdx + 1}</div>
-                                          <p className="text-sm text-slate-300 font-medium leading-relaxed opacity-80">{step}</p>
+                                {issue.fix?.length > 0 && (
+                                  <div className="p-4 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 space-y-2">
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-outfit flex items-center gap-1.5">
+                                      <Terminal size={12} className="text-indigo-600 dark:text-indigo-400" /> Remediation Steps
+                                    </p>
+                                    <div className="space-y-1.5">
+                                      {issue.fix.map((step, sIdx) => (
+                                        <div key={sIdx} className="flex gap-2 items-start text-xs text-slate-800 dark:text-slate-200 font-medium">
+                                          <span className="size-4 shrink-0 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold text-[10px] flex items-center justify-center mt-0.5">{sIdx + 1}</span>
+                                          <span>{step}</span>
                                         </div>
                                       ))}
                                     </div>
                                   </div>
+                                )}
 
-                                  <div className="flex flex-col sm:flex-row gap-3">
-                                    {issue.remediationCode && (
-                                      <button
-                                        onClick={() => setRemediationCode(issue.remediationCode)}
-                                        className="flex-1 py-5 bg-eu-accent/20 hover:bg-eu-accent text-white border border-eu-accent/40 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] flex items-center justify-center gap-4 transition-all shadow-neon group font-outfit"
-                                      >
-                                        <Code size={18} className="group-hover:rotate-12 transition-transform" />
-                                        Deploy Automated Patch Protocol
-                                      </button>
-                                    )}
+                                <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
+                                  {issue.remediationCode && (
                                     <button
-                                      onClick={() => onAskAI(`Deep dive into this ${issue.severity} finding: ${issue.title || issue.issue}. Give me a detailed remediation plan.`, reportId)}
-                                      className="flex-1 py-5 bg-primary/20 hover:bg-primary text-white border border-primary/40 rounded-2xl text-[11px] font-black uppercase tracking-[0.3em] flex items-center justify-center gap-4 transition-all shadow-neon group font-outfit"
+                                      onClick={() => setRemediationCode(issue.remediationCode)}
+                                      className="py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-sm font-outfit"
                                     >
-                                      <Bot size={18} className="group-hover:scale-110 transition-transform" />
-                                      Ask Sentinel GPT
+                                      <Code size={14} /> View Patch Code
                                     </button>
-                                  </div>
+                                  )}
+                                  <button
+                                    onClick={() => onAskAI(`Deep dive into this ${issue.severity} finding: ${issue.title || issue.issue}. Give me a detailed remediation plan.`, reportId)}
+                                    className="py-2.5 px-4 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all font-outfit"
+                                  >
+                                    <Bot size={14} /> Ask AI Assistant
+                                  </button>
                                 </div>
-                              );
-                            })}
-                          </div>
+                              </div>
+                            );
+                          })}
                         </div>
-                      ) : (
-                        <div className="flex items-center gap-6 p-10 rounded-[32px] bg-primary/5 border border-primary/20 shadow-neon">
-                          <CheckCircle2 size={32} className="text-primary shrink-0" />
-                          <div>
-                            <p className="text-xl font-black text-primary font-outfit uppercase tracking-widest">Architectural Integrity Confirmed</p>
-                            <p className="text-sm text-[var(--eu-text-muted)] mt-1 font-medium italic">Sentinal AI has verified all nodes. No deviations from standard protocols were detected.</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* ── Autonomous Performance Booster Playbook ── */}
-                    {report.aiInsights?.performancePlaybook?.length > 0 && (
-                      <div className="mt-10 pt-8 border-t border-white/5 space-y-4">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
-                            <Zap size={16} />
-                          </div>
-                          <div>
-                            <h4 className="text-sm font-black uppercase tracking-widest text-white font-outfit">
-                              Autonomous Performance Booster Playbook
-                            </h4>
-                            <p className="text-[11px] text-slate-400 font-medium">
-                              Principal QA architectural roadmap to optimize Core Web Vitals (FCP, LCP, CLS) & throughput
-                            </p>
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {report.aiInsights.performancePlaybook.map((step, sIdx) => (
-                            <div key={sIdx} className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-amber-500/30 transition-all flex items-start gap-3.5 group">
-                              <span className="size-6 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-black flex items-center justify-center shrink-0 mt-0.5 font-outfit">
-                                {sIdx + 1}
-                              </span>
-                              <p className="text-xs text-slate-300 font-medium leading-relaxed group-hover:text-white transition-colors">
-                                {step}
-                              </p>
-                            </div>
-                          ))}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-4 p-6 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
+                        <CheckCircle2 size={24} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        <div>
+                          <p className="text-base font-bold text-slate-900 dark:text-white font-outfit">Platform Integrity Confirmed</p>
+                          <p className="text-xs text-slate-700 dark:text-slate-300 mt-0.5 font-medium">Sentinel AI has verified all nodes. No deviations from standard QA protocols were detected.</p>
                         </div>
                       </div>
                     )}
+                  </div>
 
-                    <div className="flex gap-12 pt-10 border-t border-white/5 mt-12">
-                      <div className="flex flex-col gap-2">
-                        <span className="text-[11px] font-black text-slate-600 uppercase tracking-[0.3em] font-outfit">Analysis Engine</span>
-                        <span className="text-sm font-bold text-eu-accent uppercase tracking-widest font-outfit">GPT-4.1 Euphoria Cortex</span>
+                  {/* ── Autonomous Performance Booster Playbook ── */}
+                  {report.aiInsights?.performancePlaybook?.length > 0 && (
+                    <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800 space-y-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400">
+                          <Zap size={14} />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white font-outfit">
+                            Performance Booster Playbook
+                          </h4>
+                          <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">
+                            Architectural roadmap to optimize Core Web Vitals (FCP, LCP, CLS) & throughput
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex flex-col gap-2">
-                        <span className="text-[11px] font-black text-slate-600 uppercase tracking-[0.3em] font-outfit">Processing Threads</span>
-                        <span className="text-sm font-bold text-white uppercase tracking-widest font-outfit">{report.pagesCrawled || 1} Nodes Scanned</span>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {report.aiInsights.performancePlaybook.map((step, sIdx) => (
+                          <div key={sIdx} className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-start gap-3">
+                            <span className="size-5 rounded bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                              {sIdx + 1}
+                            </span>
+                            <p className="text-xs text-slate-800 dark:text-slate-200 font-medium leading-relaxed">
+                              {step}
+                            </p>
+                          </div>
+                        ))}
                       </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-8 pt-6 border-t border-slate-200 dark:border-slate-800 mt-8">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-outfit">Analysis Engine</span>
+                      <span className="text-xs font-bold text-indigo-700 dark:text-indigo-400 font-outfit">GPT-4.1 Diagnostic Engine</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-outfit">Coverage Nodes</span>
+                      <span className="text-xs font-bold text-slate-900 dark:text-white font-outfit">{report.pagesCrawled || 1} Pages Scanned</span>
                     </div>
                   </div>
                 </div>
               ) : report.status === 'completed' ? (
-                <div className="flex items-center gap-8 p-12 rounded-[40px] border-[var(--eu-glass-border)] bg-[var(--eu-bg-card)] glass-euphoria">
-                  <div className="size-16 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10 text-slate-500 shadow-inner"><Cpu size={32} /></div>
+                <div className="flex items-center gap-6 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+                  <div className="size-12 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-500"><Cpu size={24} /></div>
                   <div>
-                    <p className="text-xl font-black text-slate-300 font-outfit uppercase tracking-widest">Neural Uplink Silenced</p>
-                    <p className="text-sm text-slate-500 mt-1 font-medium">Cognitive analysis is currently unavailable. Ensure the neural key (API_KEY) is valid in the server config.</p>
+                    <p className="text-base font-bold text-slate-900 dark:text-white font-outfit">AI Insights Offline</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 font-medium">Cognitive analysis is currently unavailable. Ensure the neural key (API_KEY) is valid in the server config.</p>
                   </div>
                 </div>
               ) : null}
 
               {/* ── Quick Stats Grid (Optimized) ── */}
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-                <StatCard label="Neural Latency" value={`${report.performanceMetrics?.loadTime?.toFixed(0) || 0} ms`} color="text-eu-accent" icon={<Zap size={24} />} />
-                <StatCard label="Data Packets" value={report.performanceMetrics?.requestCount || 0} color="text-white" icon={<Wifi size={24} />} />
-                <StatCard label="Crawl Depth" value={report.pagesCrawled || 0} color="text-primary" icon={<ExternalLink size={24} />} />
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <StatCard label="Neural Latency" value={`${report.performanceMetrics?.loadTime?.toFixed(0) || 0} ms`} color="text-indigo-600 dark:text-indigo-400" icon={<Zap size={22} />} />
+                <StatCard label="Data Packets" value={report.performanceMetrics?.requestCount || 0} color="text-slate-900 dark:text-white" icon={<Wifi size={22} />} />
+                <StatCard label="Crawl Depth" value={report.pagesCrawled || 0} color="text-indigo-600 dark:text-indigo-400" icon={<ExternalLink size={22} />} />
               </div>
 
               {/* ── Lighthouse Performance Matrix ── */}
               {report.lighthouseScores && (
-                <div className="glass-euphoria p-8 md:p-12 rounded-[40px] border-white/5 shadow-2xl relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-1 h-full bg-eu-accent/40" />
-                  <div className="flex flex-col md:flex-row items-center justify-between gap-12">
-                    <div className="max-w-xs space-y-4">
-                      <h3 className="text-3xl font-black uppercase tracking-tight-mega text-white font-outfit">Lighthouse <span className="text-eu-accent italic">Sync</span></h3>
-                      <p className="text-slate-500 text-sm font-medium leading-relaxed">Chrome DevTools diagnostic scores synchronized via automated crawl protocols.</p>
+                <div className="bg-white dark:bg-slate-900 p-8 md:p-10 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+                    <div className="max-w-xs space-y-2">
+                      <h3 className="text-2xl font-black uppercase tracking-tight text-slate-900 dark:text-white font-outfit">Lighthouse <span className="text-indigo-600 dark:text-indigo-400">Scores</span></h3>
+                      <p className="text-slate-600 dark:text-slate-400 text-xs font-medium leading-relaxed">Chrome DevTools diagnostic scores synchronized via automated crawl protocols.</p>
                     </div>
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-12 md:gap-20">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 md:gap-14">
                       <LighthouseCircle label="Performance" score={report.lighthouseScores.performance} delta={report.comparison?.lighthouseDelta?.performance} />
-                      <LighthouseCircle label="Neural SEO" score={report.lighthouseScores.seo} delta={report.comparison?.lighthouseDelta?.seo} />
-                      <LighthouseCircle label="Protocols" score={report.lighthouseScores.bestPractices} delta={report.comparison?.lighthouseDelta?.bestPractices} />
-                      <LighthouseCircle label="Inclusion" score={report.lighthouseScores.accessibility} delta={report.comparison?.lighthouseDelta?.accessibility} />
+                      <LighthouseCircle label="SEO" score={report.lighthouseScores.seo} delta={report.comparison?.lighthouseDelta?.seo} />
+                      <LighthouseCircle label="Best Practices" score={report.lighthouseScores.bestPractices} delta={report.comparison?.lighthouseDelta?.bestPractices} />
+                      <LighthouseCircle label="Accessibility" score={report.lighthouseScores.accessibility} delta={report.comparison?.lighthouseDelta?.accessibility} />
                     </div>
                   </div>
                 </div>
@@ -1113,64 +1061,63 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
 
               {/* ── Delta Comparison Panel ── */}
               {report.comparison?.previousReportId && (
-                <div className="glass-euphoria p-8 md:p-12 rounded-[40px] border-white/5 shadow-2xl relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-8 opacity-5"><Activity size={80} /></div>
-                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-8">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-3">
-                        <div className="size-10 bg-eu-accent/20 rounded-xl flex items-center justify-center border border-eu-accent/30 shadow-neon text-eu-accent">
-                          <Activity size={16} />
+                <div className="bg-white dark:bg-slate-900 p-8 md:p-10 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden">
+                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2.5">
+                        <div className="size-8 bg-indigo-50 dark:bg-indigo-950/60 rounded-lg flex items-center justify-center border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400">
+                          <Activity size={14} />
                         </div>
-                        <h3 className="text-xl font-black uppercase tracking-tight text-white font-outfit">
-                          Scan <span className="text-eu-accent italic">Delta</span>
+                        <h3 className="text-lg font-black uppercase tracking-tight text-slate-900 dark:text-white font-outfit">
+                          Scan Comparison <span className="text-indigo-600 dark:text-indigo-400">Delta</span>
                         </h3>
                       </div>
-                      <p className="text-slate-500 text-xs font-medium ml-14">Comparison against your previous scan of this target.</p>
+                      <p className="text-slate-600 dark:text-slate-400 text-xs font-medium">Comparison against your previous scan of this target.</p>
                     </div>
-                    <span className={`px-5 py-2 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] border shadow-neon ${report.comparison.stats.impact === 'Improved'
-                        ? 'bg-green-500/10 border-green-500/30 text-green-400'
+                    <span className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider border ${report.comparison.stats.impact === 'Improved'
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950/50 dark:border-emerald-800 dark:text-emerald-300'
                         : report.comparison.stats.impact === 'Regressed'
-                          ? 'bg-red-500/10 border-red-500/30 text-red-400'
-                          : 'bg-white/5 border-white/10 text-slate-400'
+                          ? 'bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-950/50 dark:border-rose-800 dark:text-rose-300'
+                          : 'bg-slate-100 border-slate-200 text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'
                       }`}>
                       {report.comparison.stats.impact === 'Improved' ? '↑' : report.comparison.stats.impact === 'Regressed' ? '↓' : '→'} {report.comparison.stats.impact}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="glass-euphoria p-5 rounded-2xl border border-white/5 text-center space-y-2">
-                      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Health Score</p>
-                      <p className={`text-3xl font-black font-outfit ${report.comparison.scoreDelta >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700 text-center space-y-1">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Health Score</p>
+                      <p className={`text-2xl font-black font-outfit ${report.comparison.scoreDelta >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                         {report.comparison.scoreDelta >= 0 ? '+' : ''}{report.comparison.scoreDelta}
                       </p>
-                      <p className="text-[9px] text-slate-600 uppercase tracking-widest">pts</p>
+                      <p className="text-[10px] text-slate-600 dark:text-slate-400 font-medium">pts</p>
                     </div>
-                    <div className="glass-euphoria p-5 rounded-2xl border border-red-500/20 text-center space-y-2">
-                      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-red-400">New Errors</p>
-                      <p className="text-3xl font-black font-outfit text-red-400">{report.comparison.stats.newErrors}</p>
-                      <p className="text-[9px] text-slate-600 uppercase tracking-widest">introduced</p>
+                    <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-rose-200 dark:border-rose-800 text-center space-y-1">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400">New Errors</p>
+                      <p className="text-2xl font-black font-outfit text-rose-600">{report.comparison.stats.newErrors}</p>
+                      <p className="text-[10px] text-slate-600 dark:text-slate-400 font-medium">introduced</p>
                     </div>
-                    <div className="glass-euphoria p-5 rounded-2xl border border-green-500/20 text-center space-y-2">
-                      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-green-400">Fixed Errors</p>
-                      <p className="text-3xl font-black font-outfit text-green-400">{report.comparison.stats.fixedErrors}</p>
-                      <p className="text-[9px] text-slate-600 uppercase tracking-widest">resolved</p>
+                    <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800 text-center space-y-1">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Fixed Errors</p>
+                      <p className="text-2xl font-black font-outfit text-emerald-600">{report.comparison.stats.fixedErrors}</p>
+                      <p className="text-[10px] text-slate-600 dark:text-slate-400 font-medium">resolved</p>
                     </div>
-                    <div className="glass-euphoria p-5 rounded-2xl border border-white/5 text-center space-y-2">
-                      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">Performance</p>
-                      <p className={`text-3xl font-black font-outfit ${(report.comparison.lighthouseDelta?.performance || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700 text-center space-y-1">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">Performance</p>
+                      <p className={`text-2xl font-black font-outfit ${(report.comparison.lighthouseDelta?.performance || 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                         {(report.comparison.lighthouseDelta?.performance || 0) >= 0 ? '+' : ''}{report.comparison.lighthouseDelta?.performance || 0}
                       </p>
-                      <p className="text-[9px] text-slate-600 uppercase tracking-widest">lighthouse pts</p>
+                      <p className="text-[10px] text-slate-600 dark:text-slate-400 font-medium">lighthouse pts</p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-4 mt-4">
+                  <div className="grid grid-cols-3 gap-3 mt-4">
                     {[
                       { label: 'SEO', val: report.comparison.lighthouseDelta?.seo || 0 },
                       { label: 'Accessibility', val: report.comparison.lighthouseDelta?.accessibility || 0 },
                       { label: 'Best Practices', val: report.comparison.lighthouseDelta?.bestPractices || 0 },
                     ].map(({ label, val }) => (
-                      <div key={label} className="glass-euphoria p-4 rounded-2xl border border-white/5 flex items-center justify-between">
-                        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">{label}</p>
-                        <p className={`text-lg font-black font-outfit ${val >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                      <div key={label} className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">{label}</p>
+                        <p className={`text-base font-black font-outfit ${val >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                           {val >= 0 ? '+' : ''}{val}
                         </p>
                       </div>
@@ -1183,32 +1130,32 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
           )}
 
           {activeTab !== 'summary' && activeTab !== 'screenshots' && (
-            <motion.div key="table" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="glass p-6 rounded-2xl overflow-hidden space-y-4">
+            <motion.div key="table" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm p-6 rounded-2xl overflow-hidden space-y-4">
               <SectionHeader
                 title={tabs.find(t => t.id === activeTab)?.label || 'Diagnostic'}
                 icon={tabs.find(t => t.id === activeTab)?.icon || <Activity size={14} />}
               />
 
               {/* Industry Telemetry Search & Triage Bar */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 bg-[var(--eu-bg-card)] border border-[var(--eu-glass-border)] rounded-xl">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl">
                 <div className="relative flex-1">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 opacity-60" />
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder={`Search ${tabs.find(t => t.id === activeTab)?.label || 'findings'} by URL, status, or keyword...`}
-                    className="w-full bg-[var(--eu-bg-void)] border border-[var(--eu-glass-border)] rounded-lg pl-9 pr-4 py-2 text-xs text-[var(--eu-text-main)] placeholder-slate-500 focus:outline-none focus:border-[var(--eu-accent)] font-medium"
+                    className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg pl-9 pr-4 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-medium"
                   />
                   {searchQuery && (
-                    <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white text-xs">
+                    <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white text-xs">
                       <X size={12} />
                     </button>
                   )}
                 </div>
 
                 <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                  <span className="text-[9px] font-black uppercase text-slate-500 mr-1 tracking-widest">Filter:</span>
+                  <span className="text-[10px] font-bold uppercase text-slate-600 dark:text-slate-400 mr-1 tracking-wider">Filter:</span>
                   {(() => {
                     const currentTabItems = getTabData(report, activeTab) || [];
                     const counts = {
@@ -1225,14 +1172,14 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
                         <button
                           key={sev}
                           onClick={() => setSeverityFilter(sev)}
-                          className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 ${
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
                             severityFilter === sev
-                              ? 'bg-[var(--eu-accent)] text-white shadow-neon'
-                              : 'bg-[var(--eu-bg-void)] text-slate-400 border border-[var(--eu-glass-border)] hover:text-white'
+                              ? 'bg-indigo-600 text-white shadow-sm'
+                              : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-700'
                           }`}
                         >
                           <span>{sev}</span>
-                          <span className={`text-[8px] px-1 py-0.2 rounded-full ${severityFilter === sev ? 'bg-white/20 text-white' : 'bg-white/5 text-slate-500'}`}>
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${severityFilter === sev ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300'}`}>
                             {count}
                           </span>
                         </button>
@@ -1265,26 +1212,25 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
             </motion.div>
           )}
 
-
           {activeTab === 'screenshots' && (
             <motion.div key="screenshots" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {(report.screenshots || []).map((s, i) => {
                 const pageIssues = getAllIssuesForPage(report, s.page);
                 return (
-                  <div key={i} className="group glass-euphoria p-3 rounded-2xl space-y-3 border border-white/5 hover:border-eu-accent/30 transition-all duration-700 hover:-translate-y-1 shadow-xl">
-                    <div className="aspect-video overflow-hidden rounded-xl bg-[var(--eu-bg-void)]/60 border border-white/5 shadow-inner relative cursor-pointer" onClick={() => setPreviewImage(s)}>
-                      <img src={`${API_BASE}${s.path}`} alt={s.page} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 grayscale group-hover:grayscale-0" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-3">
-                        <div className="flex gap-2 mb-2">
-                          {pageIssues.length > 0 && <span className="px-2 py-0.5 rounded-md bg-primary text-[7px] font-black text-white shadow-neon">{pageIssues.length} ISSUES FOUND</span>}
+                  <div key={i} className="group bg-white dark:bg-slate-900 p-3 rounded-xl space-y-3 border border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all shadow-sm">
+                    <div className="aspect-video overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 relative cursor-pointer" onClick={() => setPreviewImage(s)}>
+                      <img src={`${API_BASE}${s.path}`} alt={s.page} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3">
+                        <div className="flex gap-2 mb-1">
+                          {pageIssues.length > 0 && <span className="px-2 py-0.5 rounded bg-rose-600 text-[10px] font-bold text-white">{pageIssues.length} ISSUES FOUND</span>}
                         </div>
-                        <p className="text-[10px] font-black text-white uppercase tracking-widest truncate">{s.page}</p>
+                        <p className="text-xs font-bold text-white truncate">{s.page}</p>
                       </div>
                     </div>
                     <div className="flex items-center justify-between px-1">
                       <div className="space-y-0.5 min-w-0">
-                        <p className="text-[8px] font-black text-eu-accent uppercase tracking-[0.2em] font-outfit">{s.type}</p>
-                        <p className="text-[11px] font-black text-white truncate max-w-[150px] font-outfit">
+                        <p className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider font-outfit">{s.type}</p>
+                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[150px] font-outfit">
                           {(() => {
                             try {
                               return new URL(s.page).pathname;
@@ -1296,9 +1242,9 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
                       </div>
                       <button
                         onClick={() => setPreviewImage(s)}
-                        className="size-10 bg-white/5 rounded-xl flex items-center justify-center text-eu-accent hover:bg-eu-accent/20 transition-all border border-white/10 shadow-inner group-hover:shadow-neon"
+                        className="size-8 bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 rounded-lg flex items-center justify-center text-slate-700 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 transition-all border border-slate-200 dark:border-slate-700"
                       >
-                        <Sparkles size={14} className="animate-pulse" />
+                        <Sparkles size={13} />
                       </button>
                     </div>
                   </div>
@@ -1316,77 +1262,66 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[999] bg-black/95 backdrop-blur-3xl flex items-center justify-center p-4 md:p-10"
+            className="fixed inset-0 z-[999] bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4 md:p-8"
           >
             <motion.div
-              initial={{ scale: 0.95, opacity: 0, y: 30 }}
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 30 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
               onClick={e => e.stopPropagation()}
-              className="relative w-full max-w-7xl h-[90vh] glass-euphoria rounded-[40px] border border-white/10 shadow-[0_0_120px_rgba(var(--eu-accent-rgb),0.25)] flex flex-col md:flex-row overflow-hidden"
+              className="relative w-full max-w-6xl h-[85vh] bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col md:flex-row overflow-hidden"
             >
               {/* Left Side: Visual Context */}
-              <div className="flex-[3] relative bg-[var(--eu-bg-void)] border-r border-white/5 overflow-hidden flex items-center justify-center group">
-                <img src={`${API_BASE}${previewImage.path}`} alt="Neural Preview" className="max-w-full max-h-full object-contain shadow-2xl transition-transform duration-500 group-hover:scale-105" />
-                <div className="absolute top-6 left-6 flex items-center gap-3">
-                  <div className="px-5 py-2 bg-eu-accent text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-neon">Tactical Snapshot</div>
-                  <div className="px-5 py-2 bg-white/5 border border-white/10 text-white/50 text-[10px] font-black uppercase tracking-widest rounded-xl backdrop-blur-md">{previewImage.page}</div>
+              <div className="flex-[3] relative bg-slate-100 dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 overflow-hidden flex items-center justify-center group p-4">
+                <img src={`${API_BASE}${previewImage.path}`} alt="Diagnostic Preview" className="max-w-full max-h-full object-contain rounded-lg shadow-md" />
+                <div className="absolute top-4 left-4 flex items-center gap-2">
+                  <div className="px-3 py-1 bg-indigo-600 text-white text-[11px] font-bold uppercase tracking-wider rounded-lg shadow-sm">Diagnostic Snapshot</div>
+                  <div className="px-3 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-lg shadow-sm">{previewImage.page}</div>
                 </div>
-                <button onClick={() => setPreviewImage(null)} className="absolute top-6 right-6 size-12 hover:bg-white/5 rounded-2xl flex items-center justify-center text-white/40 hover:text-white transition-all">
-                  <X size={24} />
+                <button onClick={() => setPreviewImage(null)} className="absolute top-4 right-4 size-9 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center justify-center text-slate-700 dark:text-slate-200 shadow-sm transition-all">
+                  <X size={18} />
                 </button>
               </div>
 
               {/* Right Side: Tactical Error Feed */}
-              <div className="flex-[2] flex flex-col h-full bg-black/40 backdrop-blur-md border-l border-white/10">
-                <div className="p-8 border-b border-white/5">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Activity size={18} className="text-eu-accent" />
-                    <h3 className="text-xl font-black uppercase tracking-widest text-white">Visual Audit Lab</h3>
+              <div className="flex-[2] flex flex-col h-full bg-slate-50 dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800">
+                <div className="p-6 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                  <div className="flex items-center gap-2.5 mb-1">
+                    <Activity size={16} className="text-indigo-600 dark:text-indigo-400" />
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white font-outfit">Visual Audit Findings</h3>
                   </div>
-                  <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">{getAllIssuesForPage(report, previewImage.page).length} Neural Failures Aligned to URL</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">{getAllIssuesForPage(report, previewImage.page).length} issues aligned to this view</p>
                 </div>
 
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4">
+                <div className="flex-1 overflow-y-auto p-4 space-y-3">
                   {getAllIssuesForPage(report, previewImage.page).length > 0 ? (
                     getAllIssuesForPage(report, previewImage.page).map((issue, idx) => (
-                      <div key={idx} className="p-5 bg-white/5 border border-white/5 rounded-[24px] hover:border-eu-accent/30 transition-all group">
-                        <div className="flex items-center gap-3 mb-3">
-                          <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-md bg-black/40 border border-white/10 ${issue._color}`}>
+                      <div key={idx} className="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
                             {issue._source}
                           </span>
                           {issue.severity && (
-                            <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-md bg-black/40 border border-white/10 ${issue.severity === 'High' || issue.severity === 'Critical' ? 'text-primary' : 'text-yellow-400'}`}>
+                            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
+                              issue.severity === 'High' || issue.severity === 'Critical' ? 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950 dark:text-rose-300' : 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950 dark:text-amber-300'
+                            }`}>
                               {issue.severity}
                             </span>
                           )}
                         </div>
-                        <p className="text-xs font-black text-white/90 mb-2 leading-relaxed">{issue.message || issue.issue || issue.status + ' ' + (issue.type || 'Error')}</p>
+                        <p className="text-xs font-bold text-slate-900 dark:text-white leading-relaxed">{issue.message || issue.issue || issue.status + ' ' + (issue.type || 'Error')}</p>
                         {issue.recommendation && (
-                          <p className="text-[10px] text-white/40 font-medium leading-relaxed group-hover:text-white/60 transition-colors uppercase tracking-tight italic">Fix: {issue.recommendation}</p>
+                          <p className="text-xs text-slate-700 dark:text-slate-300 font-medium leading-relaxed">Fix: {issue.recommendation}</p>
                         )}
-                        {issue.url && <p className="text-[8px] text-eu-accent/40 font-mono mt-3 truncate">{issue.url}</p>}
+                        {issue.url && <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-mono truncate">{issue.url}</p>}
                       </div>
                     ))
                   ) : (
-                    <div className="h-full flex flex-col items-center justify-center opacity-20 text-center -mt-10">
-                      <Zap size={48} className="mb-4" />
-                      <p className="text-[10px] font-black uppercase tracking-widest px-10">No specific failures synchronized for this visual capture.</p>
+                    <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-500">
+                      <CheckCircle2 size={36} className="mb-2 text-emerald-500" />
+                      <p className="text-xs font-medium">No specific issues logged for this capture.</p>
                     </div>
                   )}
-                </div>
-
-                <div className="p-8 bg-eu-accent/5 border-t border-white/5">
-                  <p className="text-[9px] font-black text-eu-accent uppercase tracking-widest mb-1">Diagnostic Context</p>
-                  <p className="text-[11px] font-black text-white/60 uppercase">
-                    Manual remediation required for neural path: {(() => {
-                      try {
-                        return new URL(previewImage.page).pathname;
-                      } catch (e) {
-                        return previewImage.page || 'Root';
-                      }
-                    })()}
-                  </p>
                 </div>
               </div>
             </motion.div>
@@ -1400,38 +1335,38 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
         <AnimatePresence>
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[999] flex items-center justify-center p-4 sm:p-10 bg-[var(--eu-bg-overlay-modal)] backdrop-blur-xl"
+            className="fixed inset-0 z-[999] flex items-center justify-center p-4 sm:p-8 bg-slate-950/70 backdrop-blur-md"
             onClick={() => setRemediationCode(null)}
           >
             <motion.div
-              initial={{ scale: 0.9, y: 40 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 40 }}
-              className="w-full max-w-4xl glass-euphoria rounded-[48px] overflow-hidden shadow-neon"
+              initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
+              className="w-full max-w-3xl bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-2xl"
               onClick={e => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between p-6 sm:p-8 border-b border-[var(--eu-glass-border)] bg-[var(--eu-bg-void)]/40">
-                <div className="flex items-center gap-4">
-                  <div className="size-12 bg-eu-accent/20 rounded-xl flex items-center justify-center border border-eu-accent/20 text-eu-accent shadow-neon"><Code size={20} /></div>
+              <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                <div className="flex items-center gap-3">
+                  <div className="size-9 bg-indigo-50 dark:bg-indigo-950/60 rounded-lg flex items-center justify-center text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800"><Code size={18} /></div>
                   <div>
-                    <h3 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-[var(--eu-text-main)] font-outfit">AI <span className="premium-gradient-text">Remediation</span></h3>
-                    <p className="text-[9px] font-black text-[var(--eu-text-main)] opacity-40 uppercase tracking-[0.2em] mt-1">Authenticated Logic Patch v4.2</p>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white font-outfit">AI Recommended Patch</h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">Automated resolution code snippet</p>
                   </div>
                 </div>
-                <button onClick={() => setRemediationCode(null)} className="size-12 hover:bg-[var(--eu-bg-void)]/40 rounded-2xl text-[var(--eu-text-main)] opacity-40 flex items-center justify-center transition-all group">
-                  <AlertCircle size={28} className="rotate-45 group-hover:scale-110" />
+                <button onClick={() => setRemediationCode(null)} className="size-8 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-500 hover:text-slate-900 dark:hover:text-white flex items-center justify-center transition-all">
+                  <X size={18} />
                 </button>
               </div>
-              <div className="p-8 sm:p-12 space-y-10">
+              <div className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3 text-[11px] font-black uppercase tracking-industrial text-[var(--eu-text-main)] opacity-40"><Terminal size={16} /> Recommended Syntax_Construct</div>
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 font-outfit"><Terminal size={14} className="text-indigo-600 dark:text-indigo-400" /> Proposed Implementation</div>
                   <button
                     onClick={() => { navigator.clipboard.writeText(remediationCode); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-                    className="flex items-center gap-3 px-6 py-2.5 bg-[var(--eu-bg-void)]/60 hover:bg-eu-accent/20 rounded-xl text-[10px] font-black uppercase tracking-widest text-[var(--eu-text-main)] transition-all border border-[var(--eu-glass-border)] shadow-inner"
+                    className="flex items-center gap-2 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all shadow-sm"
                   >
-                    {copied ? <Check size={14} className="text-primary" /> : <Copy size={14} />} {copied ? 'Copied to Clipboard' : 'Copy Logic'}
+                    {copied ? <Check size={13} /> : <Copy size={13} />} {copied ? 'Copied!' : 'Copy Code'}
                   </button>
                 </div>
-                <div className="max-h-[450px] overflow-y-auto custom-scrollbar bg-black/60 rounded-[32px] border border-[var(--eu-glass-border)] p-8 md:p-12 shadow-inner">
-                  <pre className="text-sm sm:text-base font-mono text-eu-accent/90 leading-relaxed whitespace-pre-wrap">{remediationCode}</pre>
+                <div className="max-h-[400px] overflow-y-auto bg-slate-950 rounded-xl border border-slate-800 p-4 sm:p-5">
+                  <pre className="text-xs sm:text-sm font-mono text-indigo-300 leading-relaxed whitespace-pre-wrap">{remediationCode}</pre>
                 </div>
               </div>
             </motion.div>

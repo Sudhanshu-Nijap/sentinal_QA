@@ -59,7 +59,7 @@ const ChatSidebar = ({
     const raw = localStorage.getItem('userData');
     const userId = localStorage.getItem('userId');
     if (raw) {
-      try { setUserData(JSON.parse(raw)); } catch {}
+      try { setUserData(JSON.parse(raw)); } catch { }
     } else if (userId) {
       import('axios').then(async a => {
         try {
@@ -67,7 +67,7 @@ const ChatSidebar = ({
           const d = { username: data.username, email: data.email };
           setUserData(d);
           localStorage.setItem('userData', JSON.stringify(d));
-        } catch {}
+        } catch { }
       });
     }
   }, []);
@@ -179,11 +179,11 @@ const ChatSidebar = ({
                   {chat.scanCount} scan{chat.scanCount > 1 ? 's' : ''}
                 </span>
               )}
-               {chat.lastMessage && (
+              {chat.lastMessage && (
                 <p className="text-[8px] text-slate-600 truncate">
                   {chat.lastMessage.type === 'report' ? 'Scan complete'
                     : chat.lastMessage.type === 'rescan' ? 'Rescan complete'
-                    : chat.lastMessage.content?.slice(0, 30)}
+                      : chat.lastMessage.content?.slice(0, 30)}
                 </p>
               )}
             </div>
@@ -216,48 +216,50 @@ const ChatSidebar = ({
     </div>
   );
 
+  // return (
   return (
-    <div className="w-full h-full glass-node flex flex-col relative z-20">
+    <div className="w-full h-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm flex flex-col relative z-20">
       {/* Header */}
-      <div className="p-4 space-y-3">
+      <div className="p-4 space-y-3 border-b border-slate-100 dark:border-slate-800/80">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="size-7 bg-eu-accent/20 rounded-lg flex items-center justify-center border border-eu-accent/20 shadow-neon">
-              <MessageSquare className="text-eu-accent size-3.5" />
+          <div className="flex items-center gap-2.5">
+            <div className="size-7 bg-indigo-50 dark:bg-indigo-950/60 rounded-lg flex items-center justify-center border border-indigo-200 dark:border-indigo-800 shadow-sm">
+              <MessageSquare className="text-indigo-600 dark:text-indigo-400 size-3.5" />
             </div>
-            <h2 className="text-[11px] font-black uppercase tracking-widest text-[var(--eu-text-main)] opacity-70">QA Threads</h2>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">QA Threads</h2>
           </div>
           <div className="flex items-center gap-1.5">
             <button onClick={onNewSession}
-              className="size-7 bg-[var(--eu-bg-void)]/10 hover:bg-[var(--eu-bg-void)]/20 border border-[var(--eu-glass-border)] rounded-xl flex items-center justify-center text-[var(--eu-text-main)] opacity-40 hover:text-eu-accent transition-all"
+              className="size-7 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center justify-center text-slate-700 dark:text-slate-300 transition-all shadow-sm"
               title="New Session"
             >
-              <Plus size={13} />
+              <Plus size={14} />
             </button>
           </div>
         </div>
 
-
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--eu-text-main)] opacity-30 size-3" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 size-3.5" />
           <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
             placeholder="Search threads..."
-            className="w-full bg-[var(--eu-bg-void)] border border-[var(--eu-glass-border)] rounded-xl py-1.5 pl-8 pr-3 text-[9px] uppercase font-black tracking-widest text-[var(--eu-text-main)] focus:outline-none focus:border-primary/30 transition-all placeholder:text-[var(--eu-text-main)] placeholder:opacity-20" />
+            className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl py-2 pl-9 pr-3 text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400" />
         </div>
       </div>
 
       {/* Thread List */}
-      <div className="flex-1 overflow-y-auto px-2 pb-4 custom-scrollbar">
+      <div className="flex-1 overflow-y-auto px-2.5 py-3 custom-scrollbar">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-16 opacity-30">
-            <div className="size-8 border-2 border-eu-accent border-t-transparent animate-spin rounded-full mb-3" />
-            <p className="text-[8px] font-black uppercase tracking-widest text-eu-accent">Loading...</p>
+          <div className="flex flex-col items-center justify-center py-16">
+            <div className="size-7 border-2 border-indigo-600 border-t-transparent animate-spin rounded-full mb-3" />
+            <p className="text-xs font-bold uppercase tracking-wider text-indigo-600">Loading...</p>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 opacity-30 text-center">
-            <MessageSquare size={24} className="text-slate-600 mb-3" />
-            <p className="text-[9px] font-black uppercase tracking-widest text-slate-600">No threads yet</p>
-            <p className="text-[8px] text-slate-700 mt-1">Enter a URL to start scanning</p>
+          <div className="flex flex-col items-center justify-center py-16 text-center px-4">
+            <div className="size-11 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3">
+              <MessageSquare size={20} className="text-slate-500" />
+            </div>
+            <p className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">No threads yet</p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-1">Enter a URL to start scanning</p>
           </div>
         ) : (
           <div className="space-y-1">
@@ -280,21 +282,21 @@ const ChatSidebar = ({
       </div>
 
       {/* Profile Footer */}
-      <div className="p-3 border-t border-[var(--eu-glass-border)] bg-[var(--eu-bg-void)]/20">
-        <div className="flex items-center gap-2.5 p-1.5 bg-[var(--eu-bg-card)] rounded-xl border border-[var(--eu-glass-border)]">
-          <div className="size-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-            <span className="text-[11px] font-black text-[var(--eu-text-main)]">
+      <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 rounded-b-2xl">
+        <div className="flex items-center gap-2.5 p-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+          <div className="size-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center shrink-0">
+            <span className="text-xs font-black text-indigo-600 dark:text-indigo-400">
               {userData?.username?.[0]?.toUpperCase() || userData?.email?.[0]?.toUpperCase() || 'U'}
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-black text-[var(--eu-text-main)] truncate uppercase tracking-tight">
+            <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
               {userData?.username || userData?.email?.split('@')[0] || 'User'}
             </p>
-            <p className="text-[8px] font-mono text-primary truncate opacity-60">{userData?.email || 'Offline'}</p>
+            <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 truncate">{userData?.email || 'Offline'}</p>
           </div>
           <button onClick={handleReset} title="Logout"
-            className="size-8 bg-[var(--eu-bg-void)] border border-[var(--eu-glass-border)] rounded-xl flex items-center justify-center text-[var(--eu-text-main)] opacity-40 hover:bg-red-500/20 hover:text-red-500 transition-all">
+            className="size-8 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 dark:bg-slate-700 dark:hover:bg-rose-950/40 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-400 transition-all border border-slate-200 dark:border-slate-600">
             <LogOut size={13} />
           </button>
         </div>
@@ -306,10 +308,12 @@ const ChatSidebar = ({
           <div className="fixed inset-0 z-[999998]" onClick={() => setActiveMenuId(null)} />
           <motion.div initial={{ opacity: 0, scale: 0.92, y: -6 }} animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
-            style={{ position: 'fixed', top: menuPosition.top, left: menuPosition.left, zIndex: 999999, width: '12rem',
+            style={{
+              position: 'fixed', top: menuPosition.top, left: menuPosition.left, zIndex: 999999, width: '12rem',
               background: 'var(--eu-bg-card-glass)', backdropFilter: 'blur(24px)',
               border: '1px solid rgba(255,0,127,0.2)', borderRadius: '14px', padding: '6px',
-              boxShadow: '0 8px 40px rgba(0,0,0,0.6)' }}>
+              boxShadow: '0 8px 40px rgba(0,0,0,0.6)'
+            }}>
             {[
               { icon: <Edit2 size={12} />, label: 'Rename', onClick: () => { handleRename(activeMenuId); setActiveMenuId(null); } },
               { icon: <Pin size={12} />, label: 'Pin / Unpin', onClick: () => { handlePin(activeMenuId); setActiveMenuId(null); } },
