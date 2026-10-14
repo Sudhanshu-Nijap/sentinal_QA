@@ -100,10 +100,13 @@ function App() {
       const { data } = await axios.get(`${API_URL}/api/scan/active/${userId}`);
       if (data && data._id) {
         setActiveReportId(data._id);
-        // REMOVED: setRefreshKey - this caused the infinite loop
+      } else {
+        setActiveReportId(null);
+        setScanProgress(null);
+        localStorage.removeItem('sentinel_pending_progress');
       }
     } catch (err) {
-      // No active scan, silent skip
+      setActiveReportId(null);
     }
   };
 
