@@ -132,6 +132,13 @@ function processLhr(lhr, url) {
         });
     }
 
+    const coreWebVitals = {
+        lcp: audits['largest-contentful-paint']?.displayValue || 'N/A',
+        cls: audits['cumulative-layout-shift']?.displayValue || 'N/A',
+        fcp: audits['first-contentful-paint']?.displayValue || 'N/A',
+        tbt: audits['total-blocking-time']?.displayValue || 'N/A'
+    };
+
     const finalScores = {
         performance: Math.round((lhr.categories.performance?.score || 0) * 100),
         accessibility: Math.round((lhr.categories.accessibility?.score || 0) * 100),
@@ -143,6 +150,7 @@ function processLhr(lhr, url) {
 
     return {
         scores: finalScores,
+        coreWebVitals,
         accessibilityIssues: accessibilityAudits
     };
 }

@@ -5,16 +5,16 @@ const linkGuardian = require('./linkGuardian');
 
 class ChatAgent {
     constructor() {
-        this.client = new Groq({
-            apiKey: process.env.GROQ_API_KEY || process.env.GROQ_CHAT_API_KEY
-        });
+        const apiKey = process.env.GROQ_API_KEY || process.env.GROQ_CHAT_API_KEY;
+        if (apiKey) {
+            this.client = new Groq({ apiKey });
+        }
         
         // Load knowledge base
         try {
             const kbPath = path.join(__dirname, '../data/knowledgeBase.json');
             this.knowledgeBase = JSON.parse(fs.readFileSync(kbPath, 'utf8'));
         } catch (e) {
-            console.error('KB Load Error:', e);
             this.knowledgeBase = [];
         }
 
@@ -22,80 +22,73 @@ class ChatAgent {
     }
 
     /**
-     * analyzeReportQuestion - The 4-Layer Hybrid RAG Engine
-     * Signature matched to chatRoutes.js: (history, reportData)
+     * analyzeReportQuestion - The 4-Layer Hybrid RAG Engine with Memory Sliding Window
      */
-    async analyzeReportQuestion(history, reportData) {
+    async analyzeReportQuestion(history = [], reportData = {}) {
         if (!reportData) return "Neural link lost. Report context missing.";
         
-        // Extract the latest user message
-        const lastUserMsg = history.filter(h => h.role === 'user').pop();
+        // Trim history to 8 most recent messages to prevent token window overflow
+        const recentHistory = Array.isArray(history) ? history.slice(-8) : [];
+        const lastUserMsg = [...recentHistory].reverse().find(h => h.role === 'user');
         if (!lastUserMsg) return "Neural sync required. Please state your query.";
         
         const message = lastUserMsg.content;
-        const msg = message.toLowerCase();
+        const msg = message.toLowerCase().trim();
 
-        // --- LAYER 0: Rule Engine (Type A - Deterministic Counts) ---
+        // --- LAYER 0: Rule Engine (Deterministic Count & Metric Telemetry) ---
         if (msg.includes("how many") || msg.includes("count") || msg.includes("total") || msg.includes("list all") || msg.includes("stat")) {
-            // Handle "total" or "all" keyword for a comprehensive summary
-            if (msg.includes("total") || msg.includes("all") || msg.includes("summary")) {
+            if (msg.includes("total") || msg.includes("all") || msg.includes("summary") || msg.includes("overview")) {
                 const broken = reportData.brokenLinks?.length || 0;
                 const security = reportData.securityIssues?.length || 0;
                 const a11y = reportData.accessibilityIssues?.length || 0;
                 const ui = (reportData.uiIssues?.length || 0) + (reportData.responsiveIssues?.length || 0);
-                const network = reportData.networkLogs?.length || 0;
+                const network = reportData.networkLogs?.filter(n => n.status >= 400)?.length || 0;
                 const console = reportData.consoleErrors?.length || 0;
                 const total = broken + security + a11y + ui + network + console;
 
-                return `The system detected **${total}** total anomalies across the topology:\n- **${broken}** Broken Link(s)\n- **${console}** Console Error(s)\n- **${a11y}** Accessibility Violation(s)\n- **${ui}** UI/Layout Inconsistencies\n- **${network}** Network Failure(s)\n- **${security}** Security Risk(s)`;
+                return `### Telemetry Summary for ${reportData.url || 'Target Site'}\n\nThe audit uncovered **${total}** total signals:\n- **${broken}** Broken Link(s)\n- **${console}** Console Exception(s)\n- **${a11y}** Accessibility Violation(s)\n- **${ui}** UI/Layout Inconsistency(ies)\n- **${network}** HTTP Failure(s)\n- **${security}** Security Risk(s)\n\nOverall Health Score: **${reportData.healthScore || 100}/100**`;
             }
 
             if (msg.includes("broken link") || msg.includes("dead link") || msg.includes("404")) 
-                return `There are exactly **${reportData.brokenLinks?.length || 0}** broken links in this scan.`;
+                return `There are **${reportData.brokenLinks?.length || 0}** broken links in this scan report.`;
             
             if (msg.includes("security") || msg.includes("vulnerability") || msg.includes("threat") || msg.includes("risk")) 
-                return `There are **${reportData.securityIssues?.length || 0}** security vulnerabilities detected.`;
+                return `There are **${reportData.securityIssues?.length || 0}** security findings flagged in this scan.`;
             
             if (msg.includes("accessibility") || msg.includes("a11y") || msg.includes("compliance")) 
-                return `I found **${reportData.accessibilityIssues?.length || 0}** accessibility violations.`;
+                return `There are **${reportData.accessibilityIssues?.length || 0}** accessibility compliance warnings.`;
             
             if (msg.includes("ui") || msg.includes("ux") || msg.includes("layout") || msg.includes("design")) 
-                return `The UI analysis detected **${(reportData.uiIssues?.length || 0) + (reportData.responsiveIssues?.length || 0)}** design inconsistencies.`;
+                return `The layout engine detected **${(reportData.uiIssues?.length || 0) + (reportData.responsiveIssues?.length || 0)}** design inconsistencies.`;
             
             if (msg.includes("network") || msg.includes("api") || msg.includes("http") || msg.includes("request")) 
-                return `There are **${reportData.networkLogs?.length || 0}** network failures captured in this audit.`;
+                return `There are **${reportData.networkLogs?.filter(n => n.status >= 400)?.length || 0}** network failures captured.`;
             
-            if (msg.includes("console") || msg.includes("js error") || (msg.includes("error") && !msg.includes("link") && !msg.includes("a11y"))) 
-                return `I detected **${reportData.consoleErrors?.length || 0}** active console errors in this scan.`;
+            if (msg.includes("console") || msg.includes("js error") || msg.includes("exception")) 
+                return `I detected **${reportData.consoleErrors?.length || 0}** active console errors.`;
         }
 
-        // --- LAYER 1: Knowledge Base (Type A+ - Advanced RAG / Pure Deterministic) ---
-        if (Array.isArray(this.knowledgeBase)) {
-            // Fuzzy/Scored Match logic
+        // --- LAYER 1: Knowledge Base Lookup ---
+        if (Array.isArray(this.knowledgeBase) && this.knowledgeBase.length > 0) {
             const matches = this.knowledgeBase.map(kb => {
                 let score = 0;
                 const issueName = kb.issue?.toLowerCase() || "";
                 if (msg.includes(issueName)) score += 50; 
-                // Contextual matching
                 if (msg.split(' ').some(word => word.length > 3 && issueName.includes(word))) score += 10;
                 return { kb, score };
             }).filter(m => m.score > 0).sort((a, b) => b.score - a.score);
 
             const entry = matches[0]?.kb;
             
-            // If we have a high-confidence match (score >= 50) or they asked for a fix
             if (entry && (msg.includes("fix") || msg.includes("how") || msg.includes("help") || matches[0].score >= 50)) {
-                // If the user is asking for a count and a fix, the count already matched Layer 0.
-                // If they just asked for a fix, this matches.
                 const fixList = Array.isArray(entry.fix) ? entry.fix.map(f => `- ${f}`).join('\n') : entry.fix;
-                return `### Genuine Fix: ${entry.issue}\n\n**Reason:** ${entry.reason}\n\n**Recommendation:**\n${fixList}\n\n**Remediation Code:**\n\`\`\`javascript\n${entry.remediationCode}\n\`\`\``;
+                return `### Recommended Fix: ${entry.issue}\n\n**Root Cause:** ${entry.reason}\n\n**Actionable Recommendation:**\n${fixList}\n\n**Remediation Patch:**\n\`\`\`javascript\n${entry.remediationCode}\n\`\`\``;
             }
         }
 
-        // --- LAYER 2: Filter Layer (URL Safety & Grounded RAG Extraction) ---
+        // --- LAYER 2: Context Extraction & Malicious Link Detection ---
         const context = { url: reportData.url };
         
-        // --- NEW: Malicious Link Detection ---
         const urlMatch = message.match(/https?:\/\/[^\s]+/g);
         if (urlMatch) {
             const securityResults = urlMatch.map(u => linkGuardian.analyze(u)).filter(r => r.isMalicious);
@@ -109,74 +102,60 @@ class ChatAgent {
             }
         }
         
-        // 1. Surgical RAG: Extract issues exactly mentioned in chat
-        const allIssues = [
-            ...(reportData.securityIssues || []),
-            ...(reportData.accessibilityIssues || []),
-            ...(reportData.uiIssues || []),
-            ...(reportData.responsiveIssues || []),
-            ...(reportData.brokenLinks || []),
-            ...(reportData.consoleErrors || []),
-            ...(reportData.formIssues || [])
-        ];
+        // Topic-based filters
+        if (msg.includes("security")) context.security_findings = (reportData.securityIssues || []).slice(0, 8);
+        if (msg.includes("accessibility")) context.accessibility_findings = (reportData.accessibilityIssues || []).slice(0, 8);
+        if (msg.includes("ui") || msg.includes("ux")) context.ui_findings = (reportData.uiIssues || []).slice(0, 8);
+        if (msg.includes("link") || msg.includes("broken")) context.broken_links = (reportData.brokenLinks || []).slice(0, 8);
+        if (msg.includes("console") || msg.includes("error")) context.console_errors = (reportData.consoleErrors || []).slice(0, 8);
 
-        const mentionedIssues = allIssues.filter(i => {
-           const title = (i.issue || i.message || i.link || "").toLowerCase();
-           return title && msg.includes(title);
-        }).slice(0, 8);
+        // --- LAYER 3: Grounded Groq Intelligence (RAG Engine) ---
+        if (!this.client) {
+            return `### Audit Telemetry for ${reportData.url || 'Target Site'}\n\nFound **${reportData.consoleErrors?.length || 0}** console errors, **${reportData.brokenLinks?.length || 0}** broken links, and **${reportData.accessibilityIssues?.length || 0}** accessibility warnings.`;
+        }
 
-        if (mentionedIssues.length > 0) context.specifically_mentioned_in_scan = mentionedIssues;
-
-        // 2. Topic-based RAG filters
-        if (msg.includes("security")) context.security_findings = (reportData.securityIssues || []).slice(0, 10);
-        if (msg.includes("accessibility")) context.accessibility_findings = (reportData.accessibilityIssues || []).slice(0, 10);
-        if (msg.includes("ui") || msg.includes("ux")) context.ui_findings = (reportData.uiIssues || []).slice(0, 10);
-        if (msg.includes("link") || msg.includes("broken")) context.broken_links = (reportData.brokenLinks || []).slice(0, 10);
-        if (msg.includes("console") || msg.includes("error")) context.console_errors = (reportData.consoleErrors || []).slice(0, 10);
-
-        // --- LAYER 3: Grounded Groq Intelligence (The RAG Reasoning Engine) ---
-        const systemPrompt = `You are the Sentinel AI Advanced Diagnostic Engine.
+        const systemPrompt = `You are the Sentinel AI QA Diagnostic Assistant.
         
-STRATEGY: RAG (Retrieval Augmented Generation)
-1. You have been provided with SURGICAL CONTEXT from an industry-grade audit of: ${reportData.url}
-2. ONLY answer using the provided context. If information is missing, state "The diagnostic telemetry for this query is missing from the current audit."
-3. FOR EVERY ISSUE MENTIONED, YOU MUST PROVIDE:
-   - **Root Cause**: What exactly is broken in the code/DOM.
-   - **The Fix**: High-fidelity, production-ready code snippets (React, CSS, or Node.js).
-   - **Impact**: Why fixing this improves the platform (SEO/UX/Performance).
-4. Use professional, industrial terminology and format with clear Markdown headers.
- 
-CONTEXT (Live Scan Telemetry):
-${JSON.stringify(context, null, 2)}`;
+Context Telemetry: ${reportData.url}
+- Health Score: ${reportData.healthScore || 100}/100
+- Console Errors: ${reportData.consoleErrors?.length || 0}
+- Broken Links: ${reportData.brokenLinks?.length || 0}
+- Accessibility Violations: ${reportData.accessibilityIssues?.length || 0}
+
+RAG CONTEXT DATA:
+${JSON.stringify(context, null, 2)}
+
+INSTRUCTIONS:
+1. Answer the user's question clearly using Markdown headers and code blocks.
+2. Provide root cause and exact code fix suggestions whenever relevant.`;
 
         try {
             const chatCompletion = await this.client.chat.completions.create({
                 messages: [
                     { role: 'system', content: systemPrompt },
-                    ...history.map(h => ({ role: h.role === 'user' ? 'user' : 'assistant', content: h.content })),
+                    ...recentHistory.map(h => ({ role: h.role === 'user' ? 'user' : 'assistant', content: h.content })),
                     { role: 'user', content: message }
                 ],
                 model: process.env.GROQ_CHAT_MODEL || 'llama-3.1-8b-instant',
-                temperature: 0.1, // Near-deterministic for RAG accuracy
-                max_tokens: 1500
+                temperature: 0.2,
+                max_tokens: 1200
             });
 
             const reply = chatCompletion.choices[0].message.content;
             
-            // Background: Check for fix distillation
             if (reply.includes("```") && reply.toLowerCase().includes("fix")) {
                 this.distillFix(message, reply);
             }
 
             return reply;
         } catch (error) {
-            console.error('Groq RAG Error:', error);
-            return "### Neural Link Interrupted\nThe RAG diagnostics engine is currently re-calibrating. Please try again in a few seconds.";
+            console.error('[ChatAgent RAG Fault]:', error.message);
+            return `### Diagnostic Summary\n\nThe AI neural uplink is offline, but static telemetry shows:\n- **${reportData.consoleErrors?.length || 0}** Console Error(s)\n- **${reportData.brokenLinks?.length || 0}** Broken Link(s)\n- **${reportData.accessibilityIssues?.length || 0}** Accessibility Issue(s)`;
         }
     }
 
     /**
-     * distillFix - Background mechanism to save AI-generated fixes for future promotion
+     * distillFix - Background mechanism to save AI-generated fixes
      */
     async distillFix(query, reply) {
         try {
@@ -192,9 +171,10 @@ ${JSON.stringify(context, null, 2)}`;
             });
             fs.writeFileSync(this.distilledPath, JSON.stringify(distilled.slice(-50), null, 2));
         } catch (e) {
-            // Background error
+            // Background error ignored
         }
     }
 }
 
 module.exports = new ChatAgent();
+

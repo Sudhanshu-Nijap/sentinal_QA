@@ -12,5 +12,9 @@ dist/
 build/
 screenshots/
 reports/
+backend/screenshots/
+backend/reports/
+brain/
+*.log
 .vercel
 .env*.local

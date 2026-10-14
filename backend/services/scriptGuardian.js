@@ -1,16 +1,21 @@
 /**
  * ScriptGuardian - Intelligent JavaScript Static Analysis Engine
- * Detects malicious patterns, obfuscation, and data exfiltration in JS source code.
+ * Detects malicious patterns, obfuscation, DOM XSS sinks, and data exfiltration in JS source code.
  */
 class ScriptGuardian {
     constructor() {
         this.dangerTokens = [
             { id: 'DYNAMIC_EXEC', pattern: /eval\s*\(/g, severity: 'Critical', label: 'Dynamic Execution (eval)' },
             { id: 'DYNAMIC_EXEC', pattern: /new\s+Function\s*\(/g, severity: 'Critical', label: 'Dynamic Function Constructor' },
+            { id: 'DOM_XSS', pattern: /\.innerHTML\s*=|\.outerHTML\s*=|document\.write\s*\(/g, severity: 'High', label: 'DOM XSS Sink Injection' },
             { id: 'BASE64_EXEC', pattern: /atob\s*\(/g, severity: 'High', label: 'Base64 Decoding (Potential Payload)' },
             { id: 'COOKIE_THEFT', pattern: /document\.cookie/g, severity: 'High', label: 'Session Access' },
             { id: 'HTTP_LEAK', pattern: /fetch\s*\(|XMLHttpRequest|navigator\.sendBeacon/g, severity: 'Low', label: 'Network Request' },
-            { id: 'REDIRECTION', pattern: /window\.location\.href\s*=|location\.assign/g, severity: 'Medium', label: 'Automatic Redirection' }
+            { id: 'REDIRECTION', pattern: /window\.location\.href\s*=|location\.assign/g, severity: 'Medium', label: 'Automatic Redirection' },
+            { id: 'PROTOTYPE_POLLUTION', pattern: /__proto__|Object\.prototype/g, severity: 'High', label: 'Prototype Pollution Vulnerability' },
+            { id: 'KEYLOGGER', pattern: /addEventListener\s*\(\s*['"]key(?:down|press|up)['"]/g, severity: 'High', label: 'Keylogger / Input Interceptor' },
+            { id: 'CORS_BYPASS', pattern: /cors-anywhere|allorigins|herokuapp\.com/g, severity: 'Medium', label: 'CORS Proxy Bypass Service' },
+            { id: 'CRYPTO_MINER', pattern: /CoinHive|coinhive|cryptonight|webminer/gi, severity: 'Critical', label: 'Cryptojacking Script' }
         ];
     }
 
@@ -18,7 +23,7 @@ class ScriptGuardian {
      * analyze(code, filename) - Heuristic analyzer for JavaScript content
      */
     analyze(code, filename = 'script.js') {
-        if (!code || typeof code !== 'string') return { isMalicious: false, findings: [] };
+        if (!code || typeof code !== 'string') return { isMalicious: false, riskScore: 0, findings: [], filename };
 
         const findings = [];
         let totalRisk = 0;
@@ -37,13 +42,25 @@ class ScriptGuardian {
             findings.push({
                 type: 'Malicious Pattern: Data Exfiltration',
                 severity: 'Critical',
-                evidence: 'Code contains both cookie access and network transfer logic.',
-                impact: 'May be harvesting session tokens and sending them to an external server.'
+                evidence: 'Code contains both session cookie access and external network dispatch logic.',
+                impact: 'May harvest active session tokens and transmit them to external C2 endpoints.'
             });
             totalRisk += 80;
         }
 
-        // 2. Obfuscation Detection (Heuristic)
+        // 2. Hex/Unicode Escape Obfuscation Detection
+        const hexEscapes = code.match(/\\x[0-9a-fA-F]{2}/g) || [];
+        if (hexEscapes.length > 15) {
+            findings.push({
+                type: 'Obfuscated Hex Strings',
+                severity: 'High',
+                evidence: `High density of hex-escaped strings detected (${hexEscapes.length} matches).`,
+                impact: 'Conceals malicious variable names or payload URLs from static scanners.'
+            });
+            totalRisk += 45;
+        }
+
+        // 3. Obfuscation Detection (Entropy Heuristic)
         const entropy = this.calculateEntropy(code);
         if (entropy > 5.5 && code.length > 500) {
             findings.push({
@@ -55,27 +72,58 @@ class ScriptGuardian {
             totalRisk += 50;
         }
 
-        // 3. Direct Dangerous Token Warnings
+        // 4. Direct Dangerous Token Warnings
         detectedTokens.forEach(token => {
             if (token.severity === 'Critical') {
                 findings.push({
                     type: token.label,
                     severity: 'Critical',
                     evidence: `Detected ${token.count} instance(s) of dangerous execution logic.`,
-                    impact: 'Allows remote code execution or script hijacking.'
+                    impact: 'Allows arbitrary code execution or script hijacking.'
                 });
                 totalRisk += 40;
+            } else if (token.severity === 'High' && !findings.some(f => f.type === token.label)) {
+                findings.push({
+                    type: token.label,
+                    severity: 'High',
+                    evidence: `Detected ${token.count} instance(s) of sensitive system call.`,
+                    impact: token.label.includes('DOM XSS') 
+                        ? 'Renders unescaped strings directly into the DOM tree.' 
+                        : 'Exposes application state or browser credentials.'
+                });
+                totalRisk += 25;
             }
         });
 
-        // Add detected tokens to metadata for UI
         const isMalicious = totalRisk >= 60 || findings.some(f => f.severity === 'Critical');
 
         return {
             isMalicious,
             riskScore: Math.min(totalRisk, 100),
-            findings: findings.slice(0, 5), // Limit to top 5 findings
+            findings: findings.slice(0, 6),
             filename
+        };
+    }
+
+    /**
+     * analyzeInlineScripts - Analyzes an array of inline scripts extracted from HTML
+     */
+    analyzeInlineScripts(scripts = []) {
+        const aggregatedFindings = [];
+        let maxRiskScore = 0;
+
+        scripts.forEach((scriptCode, index) => {
+            const res = this.analyze(scriptCode, `inline-script-${index + 1}.js`);
+            if (res.riskScore > maxRiskScore) maxRiskScore = res.riskScore;
+            if (res.findings.length > 0) {
+                aggregatedFindings.push(...res.findings);
+            }
+        });
+
+        return {
+            isMalicious: maxRiskScore >= 60,
+            riskScore: maxRiskScore,
+            findings: aggregatedFindings.slice(0, 10)
         };
     }
 
@@ -99,3 +147,4 @@ class ScriptGuardian {
 }
 
 module.exports = new ScriptGuardian();
+

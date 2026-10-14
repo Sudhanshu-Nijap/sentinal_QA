@@ -57,13 +57,9 @@ mongoose.connect(process.env.MONGODB_URI)
     .then(() => console.log('MongoDB Neural Cluster Connected (Port 5005)'))
     .catch(err => console.error('DB Tactical Fault:', err));
 
-// ── ABSOLUTE NEURAL GATEWAY (V3 FINAL) ──────────────────────────────────────
-const fileScanner = require('./services/fileScanner');
-const scanExecutor = require('./services/scanExecutor');
-const patchApplier = require('./services/patchApplier');
+// ── Reports & System Status ──
 const ScanReport = require('./models/ScanReport');
 
-// ── Layer 1: Global Health & Verified Dashboards ──
 app.get('/status', (req, res) => res.json({ status: 'SENTINEL_SYSTEM_ALIVE', port: 5005, layer: 'Absolute_Neural_Gateway_V3' }));
 
 app.get('/api/reports', async (req, res) => {
@@ -82,119 +78,16 @@ app.get('/api/scan/active/:userId', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ── Layer 2: Neural IDE Deployment Pipeline (High Priority) ──
-app.post('/neural-debug-engine-v1-deploy-all', async (req, res) => {
-    const targetPath = req.body.filePath || req.body.path;
-    const { patches } = req.body;
-    console.log(`[NeuralTrace]: DeployAll Payload: targetPath=${targetPath}, patchesCount=${patches?.length || 0}`);
-    
-    try { 
-        if (!targetPath || !patches) throw new Error(`Substrate incomplete: path=${targetPath}, patches=${!!patches}`);
-        
-        // --- Virtual Substrate Intercept ---
-        if (targetPath?.toString().startsWith('memory://')) {
-            return res.json({ status: 'success', virtual: true, message: 'Neural memory substrate updated.' });
-        }
-
-        const normalized = path.isAbsolute(targetPath) ? targetPath : path.resolve(process.cwd(), targetPath);
-        const result = await patchApplier.deployAllPatches(normalized, patches);
-        res.json({ status: 'success', ...result }); 
-    } catch (e) { 
-        console.error('[DeployAll Fault]:', e.message);
-        res.status(500).json({ status: 'error', error: e.message }); 
-    }
-});
-
-app.post('/neural-debug-engine-v1-patch', async (req, res) => {
-    const targetPath = req.body.filePath || req.body.path;
-    const { patch } = req.body;
-    console.log(`[NeuralTrace]: SinglePatch Payload: targetPath=${targetPath}, patchLine=${patch?.line}`);
-    
-    try { 
-        if (!targetPath || !patch) throw new Error(`Substrate incomplete: path=${targetPath}, patch=${!!patch}`);
-
-        // --- Virtual Substrate Intercept ---
-        if (targetPath?.toString().startsWith('memory://')) {
-            return res.json({ status: 'deployed', virtual: true, message: 'Neural memory patch applied.' });
-        }
-        
-        const normalized = path.isAbsolute(targetPath) ? targetPath : path.resolve(process.cwd(), targetPath);
-        const result = await patchApplier.applyPatch(normalized, patch);
-        res.json({ status: 'deployed', ...result }); 
-    } catch (e) { 
-        console.error('[Patch Fault]:', e.message);
-        res.status(500).json({ status: 'error', error: e.message }); 
-    }
-});
-
-app.post('/neural-debug-engine-v1-run', async (req, res) => {
-    const { folderPath } = req.body;
-    try {
-        if (!folderPath) throw new Error('Folder path required.');
-        console.log(`[NeuralScan]: Initializing audit for substrate: ${folderPath}`);
-        
-        const files = await fileScanner.scanDirectory(folderPath);
-        if (!files.length) return res.json({ status: 'error', error: 'No source files detected.' });
-        
-        const results = [];
-        for (const file of files.slice(0, 15)) {
-            try { 
-                const audit = await scanExecutor.processFile(file);
-                results.push({ ...audit, path: file.path, name: file.name }); 
-            } catch(_) {}
-        }
-        res.json({ status: 'success', files: results });
-    } catch (e) { 
-        console.error('[Run Fault]:', e);
-        res.status(500).json({ error: e.message }); 
-    }
-});
-
-app.post('/neural-debug-engine-v1-batch-upload', async (req, res) => {
-    const { files } = req.body;
-    if (!files || !Array.isArray(files)) return res.status(400).json({ error: 'Batch required.' });
-    try {
-        const results = [];
-        for (const file of files.slice(0, 25)) {
-            try { 
-                const virtualFile = { 
-                    name: file.name, 
-                    path: 'memory://' + file.name, 
-                    isMemory: true, 
-                    content: file.content 
-                };
-                const audit = await scanExecutor.processFile(virtualFile);
-                results.push({ ...audit, path: virtualFile.path, name: virtualFile.name }); 
-            } catch(_) {}
-        }
-        res.json({ status: 'success', files: results });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.post('/neural-debug-engine-v1-upload', async (req, res) => {
-    const { fileName, content } = req.body;
-    try {
-        const result = await scanExecutor.processFile({ 
-            name: fileName, 
-            path: 'memory://'+fileName, 
-            isMemory: true, 
-            content 
-        });
-        res.json({ status: 'success', files: [result] });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
 // ── Priority 2: Infrastructure Layers (Unified Neural Routing) ──
 
 // Routes
-const scanRoutes = require('./routes/scanRoutes');
+const { router: scanRouter } = require('./routes/scanRoutes');
 const authRoutes = require('./routes/authRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const jobRoutes = require('./routes/jobRoutes');
 const schedulerService = require('./services/schedulerService');
 
 // Priority 2: Infrastructure Layers (Unified Neural Routing)
-const { router: scanRouter } = require('./routes/scanRoutes');
 app.use('/api', scanRouter); 
 app.use('/api/auth', authRoutes);
 app.use('/api/chat', chatRoutes);
@@ -203,22 +96,7 @@ app.use('/api/scheduling', jobRoutes);
 // Tactical Pulse Feedback for Verification
 app.get('/api/debug/ping', (req, res) => res.json({ status: 'Neural Uplink Stable', timestamp: new Date() }));
 
-// --- CRITICAL DISPATCH OVERRIDE (MOUNTED FIRST TO PREVENT 404) ---
-app.post('/api/pulse', async (req, res) => {
-    try {
-        const { reportId } = req.body;
-        const discordService = require('./services/discordService');
-        const result = await discordService.dispatchReport(reportId);
-        
-        if (result) {
-            res.json({ message: 'Tactical dispatch broadcast successful.' });
-        } else {
-            res.status(500).json({ error: 'Pulse transmission failed.' });
-        }
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
+
 
 const server = http.createServer(app);
 

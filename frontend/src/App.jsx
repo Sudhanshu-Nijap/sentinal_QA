@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, Shield, Bug, Activity, Command, Github as GitHubIcon, Twitter, Cpu, Layout, Terminal, Lock, Zap, MousePointer2, Skull, X, Brain, Calendar, Bot } from 'lucide-react';
+import { ShieldCheck, Shield, Bug, Activity, Command, Cpu, Zap, Skull, X, Calendar, Bot } from 'lucide-react';
 import axios from 'axios';
 
 import ScanForm from './components/ScanForm';
@@ -23,7 +23,6 @@ import LearningHubPage from './components/LearningHub/LearningHubPage';
 import FloatingAIWidget from './components/FloatingAIWidget';
 import SchedulingDashboard from './components/SchedulingDashboard';
 import AddJobModal from './components/AddJobModal';
-import IDEView from './components/IDEView';
 import { API_URL, SOCKET_URL } from './config/api';
 
 function App() {
@@ -31,7 +30,6 @@ function App() {
 
   const [activeReportId, setActiveReportId] = useState(() => localStorage.getItem('sentinel_active_report') || null);
   const [activeChatId, setActiveChatId] = useState(() => localStorage.getItem('sentinel_active_chat') || null);
-  const [showIDE, setShowIDE] = useState(false);
 
   useEffect(() => {
     if (activeChatId) localStorage.setItem('sentinel_active_chat', activeChatId);
@@ -318,12 +316,6 @@ function App() {
         {isLoading && <LoadingScreen key="loader" />}
       </AnimatePresence>
 
-      {/* Global Alert System - Top Layer */}
-      <AnimatePresence>
-        {showIDE && (
-          <IDEView key="ide-view" onClose={() => setShowIDE(false)} />
-        )}
-      </AnimatePresence>
 
       <AnimatePresence>
         {alert && (
@@ -396,74 +388,67 @@ function App() {
           </div>
 
           {!isLoggedIn && (
-            <nav className="hidden lg:flex items-center gap-10 absolute left-1/2 -translate-x-1/2">
+            <nav className="hidden lg:flex items-center gap-8 absolute left-1/2 -translate-x-1/2">
               {[
                 { name: 'Home', href: '#home' },
-                { name: 'Features', href: '#capabilities' },
-                { name: 'How it works', href: '#how-it-works' },
-                { name: 'About us', href: '#about-us' }
+                { name: 'Capabilities', href: '#capabilities' },
+                { name: 'Workflow', href: '#how-it-works' },
+                { name: 'Architecture', href: '#about-us' }
               ].map((link) => (
                 <a
                   key={link.name}
                   href={link.href}
-                  className="text-[10px] font-black uppercase tracking-[0.25em] text-muted hover:text-eu-accent transition-all relative group"
+                  className="text-xs font-medium text-slate-400 hover:text-slate-100 transition-colors relative group py-1"
                 >
                   {link.name}
-                  <span className="absolute -bottom-1 left-0 w-0 h-[1px] bg-eu-accent transition-all group-hover:w-full shadow-neon" />
+                  <span className="absolute bottom-0 left-0 w-0 h-[1.5px] bg-indigo-500 transition-all group-hover:w-full" />
                 </a>
               ))}
             </nav>
           )}
 
           {isLoggedIn && (
-            <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 md:gap-3">
+            <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 md:gap-2">
               {[
-                { id: 'qa', label: 'CHAT', icon: <Bot size={15} />, title: 'Neural Assistant' },
-                { id: 'analyze', label: 'ANALYZE', icon: <Activity size={15} />, title: 'Global Intelligence' },
-                { id: 'learn', label: 'LEARN', icon: <Cpu size={15} />, title: 'Cognitive Learning Hub' },
-                { id: 'schedule', label: 'SCHEDULE', icon: <Calendar size={15} />, title: 'Neural Scheduler' },
-                { id: 'ide', label: 'DEBUG', icon: <Brain size={15} />, title: 'AI Neural Debugger' },
+                { id: 'qa', label: 'Chat', icon: <Bot size={15} />, title: 'AI Assistant' },
+                { id: 'analyze', label: 'Analyze', icon: <Activity size={15} />, title: 'Intelligence Dashboard' },
+                { id: 'learn', label: 'Learn', icon: <Cpu size={15} />, title: 'Knowledge Base' },
+                { id: 'schedule', label: 'Schedule', icon: <Calendar size={15} />, title: 'Automated Audits' },
               ].map(v => (
                 <button
                   key={v.id}
                   onClick={() => {
-                    if (v.id === 'ide') {
-                      setShowIDE(true);
-                      return;
-                    }
                     setActiveView(v.id);
                     setViewingReportId(null);
                   }}
-                  className={`px-3 py-2 md:px-5 md:py-2.5 rounded-full transition-all border flex items-center gap-2.5 group ${activeView === v.id
-                      ? 'bg-primary border-primary text-white shadow-neon scale-105'
-                      : 'bg-white/5 border-white/10 text-primary hover:bg-primary/10 hover:border-primary/40'
+                  className={`px-4 py-2 rounded-xl transition-all border flex items-center gap-2 font-semibold text-xs ${activeView === v.id
+                      ? 'bg-indigo-600 border-indigo-500 text-white shadow-sm'
+                      : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
                     }`}
                   title={v.title}
                 >
-                  <div className={activeView === v.id ? "animate-pulse" : ""}>{v.icon}</div>
-                  <span className="hidden sm:inline text-[9px] font-black tracking-[0.2em]">{v.label}</span>
+                  <div>{v.icon}</div>
+                  <span className="hidden sm:inline">{v.label}</span>
                 </button>
               ))}
             </div>
           )}
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <button
               onClick={toggleTheme}
-              className="p-3 bg-[var(--eu-bg-void)]/60 hover:bg-[var(--eu-bg-void)]/80 rounded-2xl transition-all border border-[var(--eu-glass-border)] text-primary"
-              title="Toggle Cinematic Mode"
+              className="p-2.5 bg-slate-900/60 hover:bg-slate-800/80 rounded-xl transition-all border border-slate-800 text-slate-300"
+              title="Toggle Theme"
             >
-              <Zap size={16} fill={theme === 'dark' ? "currentColor" : "none"} className={theme === 'dark' ? "animate-pulse" : ""} />
+              <Zap size={16} fill={theme === 'dark' ? "currentColor" : "none"} className={theme === 'dark' ? "text-indigo-400" : ""} />
             </button>
 
             {!isLoggedIn && (
               <button
                 onClick={() => setIsAuthOpen(true)}
-                className="group relative px-6 py-2 bg-primary border border-primary/20 rounded-2xl overflow-hidden hover:scale-105 transition-all shadow-neon"
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-xl transition-all shadow-md active:scale-95"
               >
-                <span className="relative font-outfit font-black text-[9px] tracking-industrial text-white uppercase">
-                  Auth
-                </span>
+                Sign In
               </button>
             )}
           </div>
@@ -481,45 +466,61 @@ function App() {
               className="flex flex-col gap-0"
             >
               {/* Hero Section */}
-              <section id="home" className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden scroll-mt-32">
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1200px] h-[1200px] bg-primary/5 rounded-full blur-[180px] -z-10 animate-pulse" />
+              <section id="home" className="relative min-h-[90vh] flex items-center justify-center px-4 overflow-hidden pt-24 pb-16">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[450px] bg-indigo-500/10 rounded-full blur-[140px] -z-10" />
 
-                <div className="text-center z-10 max-w-5xl w-full mx-auto px-10">
+                <div className="text-center z-10 max-w-5xl w-full mx-auto px-6">
                   <motion.div
-                    initial={{ opacity: 0, y: 40 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6 }}
                   >
-                    <h1 className="font-outfit font-black text-5xl sm:text-7xl md:text-9xl leading-[0.8] tracking-tight-mega mb-12 premium-gradient-text uppercase">
-                      SENTINEL<br />AI QA
+                    <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs sm:text-sm font-semibold tracking-wide mb-8">
+                      <Shield size={16} className="text-indigo-400" />
+                      Autonomous QA & Security Platform
+                    </span>
+
+                    <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-slate-100 mb-8 leading-[1.15]">
+                      Automated Web Security <br className="hidden sm:block" />
+                      & Performance Intelligence
                     </h1>
 
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-8 mb-16 opacity-60">
-                      <div className="flex items-center gap-3">
-                        <Shield className="text-primary" size={12} />
-                        <span className="text-[9px] font-black tracking-widest uppercase">Hardened Topology</span>
+                    <p className="text-slate-300 text-base sm:text-lg md:text-xl max-w-3xl mx-auto leading-relaxed mb-10 font-normal">
+                      Continuous page discovery, Core Web Vitals auditing, security threat detection, and AI-powered code remediation in a unified workspace.
+                    </p>
+
+                    <div className="flex flex-wrap items-center justify-center gap-5 mb-14">
+                      <button
+                        onClick={() => setIsAuthOpen(true)}
+                        className="px-8 py-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm tracking-wide transition-all shadow-xl shadow-indigo-500/25 active:scale-95 flex items-center gap-2.5"
+                      >
+                        <Zap size={18} />
+                        Get Started Free
+                      </button>
+
+                      <button
+                        onClick={() => setIsAuthOpen(true)}
+                        className="px-8 py-4 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 text-slate-200 font-bold text-sm tracking-wide transition-all active:scale-95"
+                      >
+                        Sign In
+                      </button>
+                    </div>
+
+                    <div className="pt-10 border-t border-slate-800/80 flex flex-wrap items-center justify-center gap-10 text-xs sm:text-sm font-semibold text-slate-400">
+                      <div className="flex items-center gap-2.5">
+                        <span className="size-2 rounded-full bg-indigo-500" />
+                        100% Page Crawling Accuracy
                       </div>
-                      <div className="flex items-center gap-3">
-                        <Cpu className="text-primary" size={12} />
-                        <span className="text-[9px] font-black tracking-widest uppercase">Neural Auditing</span>
+                      <div className="flex items-center gap-2.5">
+                        <span className="size-2 rounded-full bg-emerald-500" />
+                        Lighthouse Core Web Vitals
                       </div>
-                      <div className="flex items-center gap-3">
-                        <Activity className="text-primary" size={12} />
-                        <span className="text-[9px] font-black tracking-widest uppercase">Live Diagnostics</span>
+                      <div className="flex items-center gap-2.5">
+                        <span className="size-2 rounded-full bg-violet-500" />
+                        Automated AI Code Fixes
                       </div>
                     </div>
                   </motion.div>
-
-                  <div className="flex justify-center mt-12">
-                    <button
-                      onClick={() => setIsAuthOpen(true)}
-                      className="flex items-center justify-center gap-4 bg-primary text-white font-outfit font-black py-4 sm:py-6 px-8 sm:px-12 rounded-2xl shadow-neon-strong hover:scale-[1.05] transition-all active:scale-95 text-[10px] sm:text-xs uppercase tracking-[0.3em] group"
-                    >
-                      <Zap size={18} className="animate-pulse group-hover:scale-110 transition-transform" />
-                      <span>Authenticate Protocol</span>
-                    </button>
-                  </div>
                 </div>
               </section>
 

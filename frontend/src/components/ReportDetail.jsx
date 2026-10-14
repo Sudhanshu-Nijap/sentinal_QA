@@ -4,10 +4,10 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronLeft, ExternalLink, AlertTriangle, Terminal, Layout,
-  FormInput, Image, Zap, Smartphone, UserCheck, Loader2,
+  FormInput, Image, Zap, UserCheck, Loader2,
   CheckCircle2, Info, AlertCircle, BarChart3, Database, Shield, Cpu, Bot,
-  Wifi, Trash2, Skull, Code, Copy, Check, Plus, Github as GitHubIcon,
-  Activity, Globe, Sparkles, X
+  Wifi, Trash2, Code, Copy, Check, Plus,
+  Activity, Sparkles, X, Search
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -66,9 +66,8 @@ const LighthouseCircle = ({ label, score, delta }) => {
       </div>
       {/* Comparison Delta */}
       {delta !== undefined && delta !== 0 && (
-        <div className={`mt-2 flex items-center justify-center gap-1 font-black text-[10px] uppercase shadow-neon-soft px-3 py-1 rounded-lg border ${
-          delta > 0 ? 'text-green-500 border-green-500/20 bg-green-500/5' : 'text-primary border-primary/20 bg-primary/5'
-        }`}>
+        <div className={`mt-2 flex items-center justify-center gap-1 font-black text-[10px] uppercase shadow-neon-soft px-3 py-1 rounded-lg border ${delta > 0 ? 'text-green-500 border-green-500/20 bg-green-500/5' : 'text-primary border-primary/20 bg-primary/5'
+          }`}>
           {delta > 0 ? <Plus size={10} strokeWidth={4} /> : <div className="w-2 h-[2px] bg-primary rounded-full shrink-0" />}
           {Math.abs(Math.round(delta))}
         </div>
@@ -77,38 +76,71 @@ const LighthouseCircle = ({ label, score, delta }) => {
   );
 };
 
-const getTabData = (report, tab) => {
-  switch (tab) {
-    case 'network': return report.networkLogs;
-    case 'links': return report.brokenLinks;
-    case 'console': return report.consoleErrors;
-    case 'layout': return [...(report.uiIssues || []), ...(report.responsiveIssues || [])];
-    case 'accessibility': return report.accessibilityIssues;
-    case 'forms': return report.formIssues;
-    case 'security': return report.securityIssues;
-    default: return [];
+const optimizeAndDeduplicateIssues = (items) => {
+  if (!items || !Array.isArray(items) || items.length === 0) return [];
+
+  const map = new Map();
+
+  for (const item of items) {
+    // Generate a unique fingerprint based on testCaseId, message/issue, and target selector/url/location
+    const coreKey = item.testCaseId 
+      ? `${item.testCaseId}-${item.selector || item.location || ''}`
+      : `${item.type || ''}-${item.message || item.issue || item.link || item.url || ''}-${item.method || ''}`;
+
+    if (!map.has(coreKey)) {
+      map.set(coreKey, {
+        ...item,
+        _occurrences: 1,
+        _affectedLocations: [item.page || item.location || item.url || 'Primary View'].filter(Boolean)
+      });
+    } else {
+      const existing = map.get(coreKey);
+      existing._occurrences += 1;
+      const loc = item.page || item.location || item.url;
+      if (loc && !existing._affectedLocations.includes(loc)) {
+        existing._affectedLocations.push(loc);
+      }
+    }
   }
+
+  return Array.from(map.values());
+};
+
+const getTabData = (report, tab) => {
+  let raw = [];
+  switch (tab) {
+    case 'network': raw = report.networkLogs || []; break;
+    case 'links': raw = report.brokenLinks || []; break;
+    case 'console': raw = report.consoleErrors || []; break;
+    case 'layout': raw = [...(report.uiIssues || []), ...(report.responsiveIssues || [])]; break;
+    case 'accessibility': raw = report.accessibilityIssues || []; break;
+    case 'forms': raw = report.formIssues || []; break;
+    case 'security': raw = report.securityIssues || []; break;
+    default: raw = []; break;
+  }
+  return optimizeAndDeduplicateIssues(raw);
 };
 
 const getTableColumns = (tab) => {
   switch (tab) {
-    case 'network': return ['Page', 'Method', 'Status', 'Time', 'Url'];
+    case 'network': return ['Page', 'Method', 'Status', 'Type', 'Url'];
     case 'links': return ['Page', 'Link', 'Status'];
-    case 'console': return ['Page', 'Message', 'Type'];
-    case 'layout': return ['Page', 'Context', 'Issue', 'Selector'];
+    case 'console': return ['Page', 'Message', 'Severity', 'Type'];
+    case 'layout': return ['Page', 'Context', 'Issue', 'Severity', 'Selector'];
     case 'accessibility': return ['Page', 'Issue', 'Severity', 'Element'];
-    case 'forms': return ['Page', 'Context', 'Form', 'Type', 'Field', 'Severity'];
+    case 'forms': return ['Page', 'Context', 'Form', 'Type', 'Severity'];
+    case 'security': return ['Page', 'Issue', 'Severity', 'Selector'];
     default: return [];
   }
 };
 
 const getAllIssuesForPage = (report, pageUrl) => {
   const issues = [];
-  
+
   (report.consoleErrors || []).forEach(e => {
     if (e.page === pageUrl) issues.push({ ...e, _source: 'CONSOLE', _color: 'text-primary' });
   });
-  
+
   (report.networkLogs || []).forEach(e => {
     if (e.page === pageUrl) issues.push({ ...e, _source: 'NETWORK', _color: 'text-eu-accent' });
   });
@@ -125,11 +157,16 @@ const getAllIssuesForPage = (report, pageUrl) => {
     if (e.page === pageUrl) issues.push({ ...e, _source: 'LINK', _color: 'text-red-400' });
   });
 
+  (report.securityIssues || []).forEach(e => {
+    if (e.page === pageUrl) issues.push({ ...e, _source: 'SECURITY', _color: 'text-red-500' });
+  });
+
   return issues;
 };
 
 const IssueTable = ({ data, columns, setRemediationCode, onAskAI, reportId }) => {
   const [expandedRowId, setExpandedRowId] = useState(null);
+  const [copiedTicketId, setCopiedTicketId] = useState(null);
 
   if (!data || data.length === 0) return (
     <div className="text-center py-20">
@@ -140,31 +177,64 @@ const IssueTable = ({ data, columns, setRemediationCode, onAskAI, reportId }) =>
   );
 
   const getRemediationInfo = (row) => {
-    // Logic to provide meaningful remediation text based on issue type
+    // If the issue already comes with rich diagnostic telemetry, prioritize it directly!
+    const customCause = row.details || row.issue || row.message;
+    const customImpact = row.technicalImpact;
+    const customGuide = row.suggestedFix || row.recommendation;
+
+    if (customImpact && customGuide) {
+      return {
+        cause: customCause || "Diagnostic trigger identified non-standard runtime or layout behavior.",
+        impact: customImpact,
+        guide: customGuide
+      };
+    }
+
+    if (row.issue && (row.issue.includes('Leaked') || row.issue.includes('Secret') || row.issue.includes('Source Map') || row.issue.includes('Malicious'))) {
+      return {
+        cause: row.details || "Security credential or unminified asset exposed to public clients.",
+        impact: customImpact || "Severe risk of unauthorized API abuse, token hijacking, or source code reconstruction.",
+        guide: customGuide || "Rotate compromised credentials immediately and ensure keys are protected behind server environment variables."
+      };
+    }
+    if (row.type && (row.type.includes('DEAD_CLICK') || row.type.includes('CRASH_CLICK') || row.type.includes('ZOMBIE_API') || row.type.includes('CLICK_INTERCEPTION'))) {
+      return {
+        cause: customCause || "Interactive component failed to execute, dispatch handler, or was obscured by an overlay.",
+        impact: customImpact || "Severe user friction and abandonment on primary call-to-action workflows.",
+        guide: customGuide || "Verify event binding, z-index hierarchy, and ensure interactive elements receive unobstructed pointer events."
+      };
+    }
+    if (row.type && (row.type.includes('DOUBLE_SUBMIT') || row.type.includes('PLAINTEXT_PASSWORD') || row.type.includes('CSRF') || row.type.includes('VALIDATION'))) {
+      return {
+        cause: customCause || "Form validation or state submission gap identified.",
+        impact: customImpact || "Potential data corruption, duplicate charges/records, or credential security vulnerability.",
+        guide: customGuide || "Implement client-side validation constraints and debounce submit buttons on click."
+      };
+    }
     if (row.method) return { // Network
-      cause: "High latency or structural fetch failure detected in network cluster.",
-      impact: "Degraded page load performance and potential data synchronization loss.",
-      guide: `Verify endpoint ${row.url} is optimized for global distribution. Check for redundant header payloads.`
+      cause: customCause || "High latency or structural fetch failure detected in network cluster.",
+      impact: customImpact || "Degraded page load performance and potential data synchronization loss.",
+      guide: customGuide || `Verify endpoint ${row.url} is optimized for global distribution and properly handled in frontend UI.`
     };
     if (row.type === 'error' || row.message) return { // Console
-      cause: "Runtime exception identified in the neural execution environment.",
-      impact: "Potential catastrophic failure of interactive UI components.",
-      guide: "Inspect call stack for unhandled promises or null-reference collisions in the source bundle."
+      cause: customCause || "Runtime exception identified in the execution environment.",
+      impact: customImpact || "Potential catastrophic failure of interactive UI components.",
+      guide: customGuide || "Inspect call stack for unhandled promises or null-reference collisions in the source bundle."
     };
-    if (row.severity) return { // A11y
-      cause: "Structural non-compliance with global accessibility protocols.",
-      impact: "Exclusion of users with assistive technological requirements.",
-      guide: "Ensure ARIA landmarks and semantic contrasts meet WCAG 2.1 premium standards."
+    if (row.severity) return { // A11y / Security
+      cause: customCause || "Structural non-compliance with global standards.",
+      impact: customImpact || row.issue || "Exclusion of users with assistive technological requirements or security risk.",
+      guide: customGuide || "Ensure ARIA landmarks, semantic contrasts, or headers meet modern web standards."
     };
     if (row.field || row.form) return { // Forms
-      cause: "Semantic or validation gap identified in the user interaction layer.",
-      impact: "Potential user frustration or failure to complete critical business flows.",
-      guide: `Review the ${row.field} field in ${row.form}. Ensure labels and validation constraints are correctly implemented.`
+      cause: customCause || "Semantic or validation gap identified in the user interaction layer.",
+      impact: customImpact || "Potential user frustration or failure to complete critical business flows.",
+      guide: customGuide || `Review the ${row.field} field in ${row.form}. Ensure labels and validation constraints are correctly implemented.`
     };
     return {
-      cause: row.technicalImpact || "General deviation from optimized architectural standards.",
-      impact: row.issue || "Sub-optimal user experience and neural processing inefficiency.",
-      guide: row.recommendation || "Audit target element's parent hierarchy for redundant styles or layout shifts."
+      cause: customCause || "General deviation from optimized architectural standards.",
+      impact: customImpact || row.issue || "Sub-optimal user experience and processing inefficiency.",
+      guide: customGuide || "Audit target element's parent hierarchy for redundant styles or layout shifts."
     };
   };
 
@@ -195,10 +265,18 @@ const IssueTable = ({ data, columns, setRemediationCode, onAskAI, reportId }) =>
                     let value = row[key];
 
                     if (col === 'Status') {
-                      const isCrit = parseInt(value) >= 400 || value === 'Error';
+                      const statusNum = parseInt(value, 10);
+                      const is5xx = statusNum >= 500;
+                      const is4xx = statusNum >= 400 && statusNum < 500;
+                      const is2xx = statusNum >= 200 && statusNum < 400;
                       return (
                         <td key={col} className="py-3 px-4 glass-euphoria first:rounded-l-xl last:rounded-r-xl border-y border-[var(--eu-glass-border)] first:border-l last:border-r">
-                          <span className={`px-2 py-1 rounded-lg text-[9px] font-black shadow-neon ${isCrit ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-primary/10 text-primary border border-primary/20'}`}>{value || '---'}</span>
+                          <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black font-mono shadow-neon border ${
+                            is5xx ? 'bg-red-500/20 text-red-400 border-red-500/40 animate-pulse' :
+                            is4xx ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' :
+                            is2xx ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' :
+                            'bg-primary/10 text-primary border-primary/20'
+                          }`}>{value || '---'}</span>
                         </td>
                       );
                     }
@@ -206,10 +284,10 @@ const IssueTable = ({ data, columns, setRemediationCode, onAskAI, reportId }) =>
                     if (col === 'Context') {
                       return (
                         <td key={col} className="py-3 px-4 glass-euphoria first:rounded-l-xl last:rounded-r-xl border-y border-[var(--eu-glass-border)] first:border-l last:border-r">
-                           <div className="flex items-center gap-2">
-                             <div className="size-1.5 rounded-full bg-eu-accent animate-pulse" />
-                             <span className="text-[10px] font-black uppercase text-white/90 tracking-widest">{value || 'Main Layout'}</span>
-                           </div>
+                          <div className="flex items-center gap-2">
+                            <div className="size-1.5 rounded-full bg-eu-accent animate-pulse" />
+                            <span className="text-[10px] font-black uppercase text-white/90 tracking-widest">{value || 'Main Layout'}</span>
+                          </div>
                         </td>
                       );
                     }
@@ -223,7 +301,53 @@ const IssueTable = ({ data, columns, setRemediationCode, onAskAI, reportId }) =>
                       );
                     }
 
-                    if (col === 'Payload' || col === 'FormSelector' || col === 'Element' || col === 'Selector' || col === 'Message') {
+                    if (col === 'Severity') {
+                      const sevStr = (value || row.severity || '').toString().toLowerCase();
+                      const isCrit = sevStr.includes('crit');
+                      const isHigh = sevStr.includes('high');
+                      const isMed = sevStr.includes('med');
+                      return (
+                        <td key={col} className="py-3 px-4 glass-euphoria first:rounded-l-xl last:rounded-r-xl border-y border-[var(--eu-glass-border)] first:border-l last:border-r">
+                          <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase shadow-neon border tracking-wider font-outfit ${
+                            isCrit ? 'bg-red-500/20 text-red-400 border-red-500/40 shadow-[0_0_12px_rgba(239,68,68,0.35)] animate-pulse' :
+                            isHigh ? 'bg-orange-500/20 text-orange-400 border-orange-500/40 shadow-[0_0_10px_rgba(249,115,22,0.3)]' :
+                            isMed ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' :
+                            'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                          }`}>{value || row.severity || 'Medium'}</span>
+                        </td>
+                      );
+                    }
+
+                    if (col === 'Issue' || col === 'Message' || col === 'Link') {
+                      return (
+                        <td key={col} className="py-3 px-4 glass-euphoria first:rounded-l-xl last:rounded-r-xl border-y border-white/5 first:border-l last:border-r max-w-md">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              {row.testCaseId && (
+                                <span className="px-1.5 py-0.5 rounded bg-eu-accent/15 text-eu-accent text-[8px] font-black uppercase tracking-wider border border-eu-accent/30 font-mono shrink-0">
+                                  {row.testCaseId}
+                                </span>
+                              )}
+                              {row._occurrences > 1 && (
+                                <span className="px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[8px] font-black uppercase tracking-wider border border-amber-500/40 shrink-0">
+                                  x{row._occurrences}
+                                </span>
+                              )}
+                              <span className="text-[11px] font-bold text-[var(--eu-text-main)] opacity-90 break-words leading-snug font-outfit">
+                                {value || '---'}
+                              </span>
+                            </div>
+                            {row.expected && (
+                              <span className="text-[9px] text-slate-400 font-medium truncate max-w-sm">
+                                Expected: {row.expected}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      );
+                    }
+
+                    if (col === 'Payload' || col === 'FormSelector' || col === 'Element' || col === 'Selector') {
                       const looksLikeUrl = typeof value === 'string' && (value.startsWith('http') || value.startsWith('/') || value.includes('data:image'));
                       const isImageUrl = looksLikeUrl && (value.match(/\.(jpeg|jpg|gif|png|webp|svg)/i) || col === 'Selector' || col === 'Element');
                       const fileName = isImageUrl ? value.split('/').pop().split('?')[0] : null;
@@ -234,10 +358,10 @@ const IssueTable = ({ data, columns, setRemediationCode, onAskAI, reportId }) =>
                             {isImageUrl && (
                               <div className="flex items-center gap-3 bg-[var(--eu-bg-void)]/40 p-2 rounded-xl border border-white/5 group/img-preview">
                                 <div className="relative size-10 rounded-lg overflow-hidden shrink-0 border border-white/10 bg-black/20 shadow-neon">
-                                  <img 
-                                    src={value} 
-                                    alt="Issue context" 
-                                    className="w-full h-full object-cover group-hover/img-preview:scale-125 transition-transform duration-500" 
+                                  <img
+                                    src={value}
+                                    alt="Issue context"
+                                    className="w-full h-full object-cover group-hover/img-preview:scale-125 transition-transform duration-500"
                                     onError={(e) => {
                                       e.target.style.display = 'none';
                                       e.target.parentElement.classList.add('bg-primary/20');
@@ -268,10 +392,10 @@ const IssueTable = ({ data, columns, setRemediationCode, onAskAI, reportId }) =>
                     <td className="py-3 px-4 glass-euphoria first:rounded-l-xl last:rounded-r-xl border-y border-white/5 first:border-l last:border-r text-right">
                       <div className="flex items-center justify-end gap-3">
                         <button
-                          onClick={(e) => { 
-                            e.stopPropagation(); 
+                          onClick={(e) => {
+                            e.stopPropagation();
                             const issueTitle = row.issue || row.message || row.link || "this issue";
-                            onAskAI(`Analyze this finding from the report: ${issueTitle}`, reportId); 
+                            onAskAI(`Analyze this finding from the report: ${issueTitle}`, reportId);
                           }}
                           className="px-3 py-1.5 bg-primary/10 hover:bg-primary text-white rounded-lg text-[9px] font-black uppercase tracking-widest border border-primary/30 transition-all flex items-center gap-2 shadow-neon group"
                         >
@@ -304,27 +428,92 @@ const IssueTable = ({ data, columns, setRemediationCode, onAskAI, reportId }) =>
                           </div>
 
                           <div className="flex-1 space-y-6">
-                            <div className="flex items-center gap-3">
-                              <div className="size-8 bg-eu-accent/20 rounded-lg flex items-center justify-center text-eu-accent border border-eu-accent/20">
-                                <Shield size={14} />
+                            {/* Test Case & Severity Header */}
+                            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/5 pb-4">
+                              <div className="flex items-center gap-3">
+                                <div className="size-8 bg-eu-accent/20 rounded-lg flex items-center justify-center text-eu-accent border border-eu-accent/20">
+                                  <Shield size={14} />
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    {row.testCaseId && (
+                                      <span className="px-2 py-0.5 rounded bg-eu-accent/20 text-eu-accent text-[10px] font-mono font-black border border-eu-accent/30 tracking-wider">
+                                        {row.testCaseId}
+                                      </span>
+                                    )}
+                                    <h4 className="text-sm font-black uppercase tracking-widest text-[var(--eu-text-main)] font-outfit">
+                                      {row.type || 'Diagnostic Dossier'}
+                                    </h4>
+                                  </div>
+                                  <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                                    {row.issue || row.message || 'System diagnostic finding'}
+                                  </p>
+                                </div>
                               </div>
-                              <h4 className="text-sm font-black uppercase tracking-widest text-[var(--eu-text-main)]">Neural Debug Guide</h4>
+                              {row._occurrences > 1 && (
+                                <span className="px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[10px] font-black uppercase tracking-widest">
+                                  Occurrences: {row._occurrences}x ({row._affectedLocations?.length || 1} locations)
+                                </span>
+                              )}
                             </div>
 
+                            {/* Expected vs Observed Behavior */}
+                            {(row.expected || row.observed) && (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="p-4 rounded-2xl bg-emerald-500/[0.04] border border-emerald-500/20 space-y-1.5">
+                                  <span className="text-[9px] font-black uppercase tracking-widest text-emerald-400 font-outfit flex items-center gap-1.5">
+                                    <CheckCircle2 size={12} /> Expected Behavior
+                                  </span>
+                                  <p className="text-xs text-slate-300 leading-relaxed font-medium">
+                                    {row.expected || 'Target element should comply with standard UX, boundary validation, and security guidelines.'}
+                                  </p>
+                                </div>
+                                <div className="p-4 rounded-2xl bg-red-500/[0.04] border border-red-500/20 space-y-1.5">
+                                  <span className="text-[9px] font-black uppercase tracking-widest text-red-400 font-outfit flex items-center gap-1.5">
+                                    <AlertTriangle size={12} /> Actual Observed
+                                  </span>
+                                  <p className="text-xs text-slate-300 leading-relaxed font-medium">
+                                    {row.observed || row.issue || row.message || 'Non-standard runtime, layout shift, or boundary failure observed.'}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Root Cause & Technical Impact */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                               <div className="space-y-2">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--eu-text-main)] opacity-40">Root Cause</p>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-[var(--eu-text-main)] opacity-40 font-outfit">Root Cause</p>
                                 <p className="text-xs text-[var(--eu-text-main)] opacity-80 font-medium leading-relaxed italic">"{remediation.cause}"</p>
                               </div>
                               <div className="space-y-2">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-primary">Security / UX Impact</p>
-                                 <p className="text-xs text-[var(--eu-text-main)] opacity-80 font-medium leading-relaxed italic">"{remediation.impact}"</p>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-primary font-outfit">Security / UX / Performance Impact</p>
+                                <p className="text-xs text-[var(--eu-text-main)] opacity-80 font-medium leading-relaxed italic">"{remediation.impact}"</p>
                               </div>
                             </div>
 
+                            {/* Reproduction Steps */}
+                            <div className="p-4 bg-white/[0.02] rounded-2xl border border-white/5 space-y-2">
+                              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 font-outfit">Steps to Reproduce</p>
+                              <div className="space-y-1.5 text-xs text-slate-300 font-mono">
+                                <div className="flex items-center gap-2">
+                                  <span className="size-4 rounded-full bg-white/10 text-[9px] flex items-center justify-center font-bold">1</span>
+                                  <span>Navigate to: <code className="text-eu-accent">{row.page || 'target URL'}</code></span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="size-4 rounded-full bg-white/10 text-[9px] flex items-center justify-center font-bold">2</span>
+                                  <span>Locate target: <code className="text-white/80">{row.selector || row.location || row.form || 'viewport'}</code></span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="size-4 rounded-full bg-white/10 text-[9px] flex items-center justify-center font-bold">3</span>
+                                  <span>Observe trigger / payload: <code className="text-amber-300">{row.payload || row.method || 'Default boundary condition'}</code></span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Remediation Intelligence */}
                             <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
-                              <p className="text-[9px] font-black uppercase tracking-widest text-eu-accent mb-2">Remediation Intelligence</p>
-                              <p className="text-xs text-[var(--eu-text-main)] opacity-60 font-medium leading-relaxed">{remediation.guide}</p>
+                              <p className="text-[9px] font-black uppercase tracking-widest text-eu-accent mb-2 font-outfit">Remediation Intelligence</p>
+                              <p className="text-xs text-[var(--eu-text-main)] opacity-80 font-medium leading-relaxed">{remediation.guide}</p>
                             </div>
 
                             {row.htmlSnippet && row.htmlSnippet !== 'UNAVAILABLE' && (
@@ -340,12 +529,33 @@ const IssueTable = ({ data, columns, setRemediationCode, onAskAI, reportId }) =>
                             )}
                           </div>
 
-                          <div className="w-full md:w-64 space-y-4">
+                          {/* Protocol Actions Column */}
+                          <div className="w-full md:w-64 space-y-4 shrink-0">
                             <div className="p-4 bg-[var(--eu-bg-void)]/40 rounded-2xl border border-white/5">
-                              <p className="text-[8px] font-black uppercase tracking-widest text-slate-600 mb-3 text-center">Protocol Actions</p>
+                              <p className="text-[8px] font-black uppercase tracking-widest text-slate-600 mb-3 text-center">Senior QA Actions</p>
                               <div className="space-y-2">
-                                <button className="w-full py-2.5 bg-[var(--eu-bg-void)]/60 hover:bg-[var(--eu-bg-void)]/80 border border-[var(--eu-glass-border)] rounded-xl text-[9px] font-black uppercase tracking-widest text-[var(--eu-text-main)] opacity-80 transition-all">Export Log</button>
-                                <button className="w-full py-2.5 bg-[var(--eu-bg-void)]/60 hover:bg-[var(--eu-bg-void)]/80 border border-[var(--eu-glass-border)] rounded-xl text-[9px] font-black uppercase tracking-widest text-[var(--eu-text-main)] opacity-80 transition-all">Neural Trace</button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const issueTitle = row.issue || row.message || 'Issue Detected';
+                                    const testId = row.testCaseId ? `[${row.testCaseId}] ` : '';
+                                    const jiraTicket = `### [BUG] ${testId}${issueTitle}\n- **Severity:** ${row.severity || 'Medium'}\n- **Test Case ID:** ${row.testCaseId || 'N/A'}\n- **URL:** ${row.page || 'N/A'}\n- **Selector/Element:** \`${row.selector || row.location || 'N/A'}\`\n- **Occurrences:** ${row._occurrences || 1}\n\n#### Steps to Reproduce:\n1. Open ${row.page || 'target URL'} in browser.\n2. Locate element \`${row.selector || row.location || 'target'}\`.\n3. Trigger condition / payload: \`${row.payload || 'Standard user flow'}\`.\n\n#### Expected Behavior:\n${row.expected || 'Element should comply with standard UX, boundary validation, and security guidelines.'}\n\n#### Actual Observed:\n${row.observed || row.issue || row.message}\n\n#### Root Cause:\n${remediation.cause}\n\n#### Impact:\n${remediation.impact}\n\n#### Recommended Fix:\n${remediation.guide}`;
+                                    navigator.clipboard.writeText(jiraTicket);
+                                    setCopiedTicketId(rowId);
+                                    setTimeout(() => setCopiedTicketId(null), 2500);
+                                  }}
+                                  className="w-full py-2.5 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-neon font-bold"
+                                >
+                                  {copiedTicketId === rowId ? (
+                                    <>
+                                      <Check size={12} className="text-green-400" /> Copied JIRA Ticket!
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy size={12} /> Copy JIRA Bug Ticket
+                                    </>
+                                  )}
+                                </button>
                                 {row.suggestedFix && (
                                   <button
                                     onClick={() => setRemediationCode(row.suggestedFix)}
@@ -376,8 +586,9 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('summary');
   const [remediationCode, setRemediationCode] = useState(null);
-  const [previewImage, setPreviewImage] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [severityFilter, setSeverityFilter] = useState('all');
 
   const tabs = [
     { id: 'summary', label: 'Summary', icon: <Zap size={14} /> },
@@ -395,7 +606,7 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
   useEffect(() => {
     const validIds = tabs.map(t => t.id);
     if (!validIds.includes(activeTab)) {
-       setActiveTab('summary');
+      setActiveTab('summary');
     }
   }, [activeTab]);
 
@@ -566,21 +777,6 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
             Rescan <Zap size={10} />
           </button>
 
-          <button
-            onClick={async () => {
-              try {
-                // Sends report to system Discord webhook configured in .env
-                await axios.post(`${API_BASE}/api/pulse`, { reportId, type: 'discord' });
-                setAlert({ type: 'success', message: 'Discord Pulse Dispatched Successfully.' });
-              } catch (e) { 
-                setAlert({ type: 'error', message: 'Dispatch Failed: ' + (e.response?.data?.error || 'Uplink Error') }); 
-              }
-            }}
-            className="flex-none flex items-center justify-center gap-2 bg-[#5865F2]/10 hover:bg-[#5865F2] hover:text-white border border-[#5865F2]/30 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest text-[#5865F2] transition-all shadow-neon"
-          >
-            Pulse <Terminal size={10} />
-          </button>
-
 
 
           <a
@@ -598,32 +794,29 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex flex-col items-center justify-center gap-3 p-5 rounded-[32px] transition-all duration-700 group relative w-full aspect-square border-0 overflow-hidden nav-card-premium ${
-              activeTab === tab.id ? 'active scale-105 z-20' : 'hover:scale-102 z-10'
-            }`}
+            className={`flex flex-col items-center justify-center gap-3 p-5 rounded-[32px] transition-all duration-700 group relative w-full aspect-square border-0 overflow-hidden nav-card-premium ${activeTab === tab.id ? 'active scale-105 z-20' : 'hover:scale-102 z-10'
+              }`}
           >
             {/* Background Accent Glow */}
             {activeTab === tab.id && (
               <div className="absolute inset-0 bg-gradient-to-br from-eu-accent/10 to-eu-accent-violet/10 opacity-50" />
             )}
-            
+
             {/* Icon Container */}
-            <div className={`size-12 rounded-2xl flex items-center justify-center transition-all duration-700 relative z-10 ${
-              activeTab === tab.id
+            <div className={`size-12 rounded-2xl flex items-center justify-center transition-all duration-700 relative z-10 ${activeTab === tab.id
                 ? 'bg-white/10 text-white shadow-neon border border-white/20 scale-110'
                 : 'bg-white/5 text-[var(--eu-text-main)] opacity-30 group-hover:opacity-100 group-hover:bg-white/10'
-            }`}>
+              }`}>
               {tab.icon}
             </div>
 
             {/* Label & Status Hub */}
             <div className="text-center relative z-10 mt-1">
-              <p className={`text-[9px] font-black uppercase tracking-[0.2em] mb-3 transition-all duration-500 neon-text-glow ${
-                activeTab === tab.id ? 'text-white' : 'text-[var(--eu-text-main)] opacity-40'
-              }`}>
+              <p className={`text-[9px] font-black uppercase tracking-[0.2em] mb-3 transition-all duration-500 neon-text-glow ${activeTab === tab.id ? 'text-white' : 'text-[var(--eu-text-main)] opacity-40'
+                }`}>
                 {tab.label}
               </p>
-              
+
               {tab.count !== undefined && (
                 <div className={`inline-flex items-center justify-center count-badge-premium ${tab.count > 0 ? 'text-eu-accent' : 'text-slate-600'}`}>
                   <span className="text-[14px] leading-none pt-0.5">
@@ -635,7 +828,7 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
 
             {/* Selection indicator */}
             {activeTab === tab.id && (
-              <motion.div 
+              <motion.div
                 layoutId="active-nav-glow"
                 className="absolute inset-x-0 bottom-0 h-1 bg-eu-accent shadow-neon-strong"
               />
@@ -661,8 +854,6 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
                 </motion.div>
               )}
 
-
-
               {/* ── Neural Analysis Hub (AI Insights) ── */}
               {report.aiInsights ? (
                 <div className="relative group overflow-hidden rounded-[40px]">
@@ -673,9 +864,30 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
                         <Cpu size={72} className="text-eu-accent animate-pulse" />
                       </div>
                       <div className="flex-1 space-y-5">
-                        <div className="flex flex-wrap items-center gap-5">
-                          <div className="px-3 py-1.5 bg-eu-accent text-[10px] font-black uppercase tracking-[0.3em] rounded-xl shadow-neon text-white font-outfit">Cognitive Report</div>
+                        <div className="flex flex-wrap items-center gap-4">
+                          <div className="px-3 py-1.5 bg-eu-accent text-[10px] font-black uppercase tracking-[0.3em] rounded-xl shadow-neon text-white font-outfit">Autonomous QA Audit</div>
+                          {report.aiInsights?.qaVerdict && (
+                            <div className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-[0.25em] font-outfit border shadow-neon ${
+                              report.aiInsights.qaVerdict.includes('BLOCK') 
+                                ? 'bg-red-500/20 border-red-500/50 text-red-400 animate-pulse'
+                                : report.aiInsights.qaVerdict.includes('CONDITIONAL')
+                                ? 'bg-amber-500/20 border-amber-500/50 text-amber-300'
+                                : 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
+                            }`}>
+                              {report.aiInsights.qaVerdict.includes('BLOCK') ? '🛑' : report.aiInsights.qaVerdict.includes('CONDITIONAL') ? '⚠️' : '✅'} Verdict: {report.aiInsights.qaVerdict}
+                            </div>
+                          )}
                           <div className="px-3 py-1.5 bg-white/5 border border-white/5 text-[10px] font-black uppercase tracking-[0.3em] rounded-xl text-slate-500 font-outfit">{report.url}</div>
+                        </div>
+
+                        {/* ── Autonomous QA Test Suite Coverage Matrix ── */}
+                        <div className="flex flex-wrap items-center gap-2 pt-1 pb-2">
+                          <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 font-outfit">Suite Matrix:</span>
+                          <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[9px] font-bold text-slate-300">📱 Viewports (375px/768px/1280px)</span>
+                          <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[9px] font-bold text-slate-300">🛡️ Fuzzing & Boundaries</span>
+                          <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[9px] font-bold text-slate-300">⚡ Dead-Clicks & Crashes</span>
+                          <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[9px] font-bold text-slate-300">🔐 Storage & Secret Sniffer</span>
+                          <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[9px] font-bold text-slate-300">🚀 Asset & DOM Bloat</span>
                         </div>
                         {report.comparison && report.comparison.previousReportId && (
                           <div className="flex flex-wrap items-center gap-3 mb-6">
@@ -705,11 +917,10 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
                               </div>
                             )}
 
-                            <div className={`px-4 py-2 rounded-2xl border flex items-center gap-2 ${
-                              report.comparison.stats?.impact === 'Improved' ? 'bg-green-500/10 border-green-500/30 text-green-500 shadow-neon' :
-                              report.comparison.stats?.impact === 'Regressed' ? 'bg-primary/10 border-primary/30 text-primary shadow-neon' :
-                              'bg-white/5 border-white/10 text-slate-500'
-                            }`}>
+                            <div className={`px-4 py-2 rounded-2xl border flex items-center gap-2 ${report.comparison.stats?.impact === 'Improved' ? 'bg-green-500/10 border-green-500/30 text-green-500 shadow-neon' :
+                                report.comparison.stats?.impact === 'Regressed' ? 'bg-primary/10 border-primary/30 text-primary shadow-neon' :
+                                  'bg-white/5 border-white/10 text-slate-500'
+                              }`}>
                               <p className="text-[10px] font-black uppercase tracking-widest">{report.comparison.stats?.impact || 'Stable State'}</p>
                             </div>
                           </div>
@@ -724,55 +935,68 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
                     </div>
 
                     <div className="space-y-8">
-                    {/* Issue Cards */}
-                    {report.aiInsights.issues?.length > 0 ? (
-                      <div className="space-y-8">
-                        <div className="text-[12px] font-black text-eu-accent uppercase tracking-[0.4em] flex items-center gap-4 pb-4 border-b border-white/5 font-outfit">
-                          <AlertTriangle size={16} /> {report.aiInsights.issues.length} Critical Deviations Found
-                        </div>
-                        <div className="grid grid-cols-1 gap-5">
-                          {report.aiInsights.issues.map((issue, idx) => {
-                            const sc = issue.severity === 'Critical' ? 'border-primary/40 bg-primary/5' : issue.severity === 'High' ? 'border-primary/40 bg-primary/5' : issue.severity === 'Medium' ? 'border-primary/40 bg-primary/5' : 'border-primary/40 bg-primary/5';
-                            const sb = issue.severity === 'Critical' ? 'bg-primary text-white' : issue.severity === 'High' ? 'bg-primary text-white' : issue.severity === 'Medium' ? 'bg-primary text-black' : 'bg-primary text-black';
-                            return (
-                              <div key={idx} className={`border rounded-[28px] p-6 md:p-8 space-y-6 transition-all hover:translate-x-2 duration-500 ${sc} relative overflow-hidden`}>
-                                <div className="absolute top-0 right-0 p-4 opacity-5">
-                                  {issue.source === 'local' ? <Database size={48} /> : <Cpu size={48} />}
-                                </div>
-                                <div className="flex flex-wrap items-center gap-4">
-                                  <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1.5 rounded-xl ${sb} shadow-neon`}>{issue.severity}</span>
-                                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
-                                    {issue.source === 'local' ? <Database size={10} className="text-primary" /> : <Cpu size={10} className="text-eu-accent" />}
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--eu-text-muted)] font-outfit">Source: {issue.source === 'local' ? 'Neural Cache' : 'AI Diagnostic'}</span>
-                                  </div>
-                                  <h4 className="text-xl md:text-2xl font-black text-[var(--eu-text-main)] font-outfit tracking-tight">{issue.title || issue.issue}</h4>
-                                </div>
+                      {/* Issue Cards */}
+                      {report.aiInsights.issues?.length > 0 ? (
+                        <div className="space-y-8">
+                          <div className="text-[12px] font-black text-eu-accent uppercase tracking-[0.4em] flex items-center gap-4 pb-4 border-b border-white/5 font-outfit">
+                            <AlertTriangle size={16} /> {report.aiInsights.issues.length} Critical Deviations Found
+                          </div>
+                          <div className="grid grid-cols-1 gap-5">
+                            {report.aiInsights.issues.map((issue, idx) => {
+                              const sc = issue.severity === 'Critical' 
+                                ? 'border-red-500/40 bg-red-500/5 shadow-[0_0_20px_rgba(239,68,68,0.15)]' 
+                                : issue.severity === 'High' 
+                                ? 'border-orange-500/40 bg-orange-500/5 shadow-[0_0_15px_rgba(249,115,22,0.1)]' 
+                                : issue.severity === 'Medium' 
+                                ? 'border-amber-500/30 bg-amber-500/5' 
+                                : 'border-cyan-500/30 bg-cyan-500/5';
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                  <div className="space-y-3">
-                                    <p className="text-[11px] font-black uppercase tracking-[0.3em] text-eu-accent font-outfit">Issue Signature</p>
-                                    <p className="text-base text-slate-300 leading-relaxed font-medium">{issue.issue}</p>
+                              const sb = issue.severity === 'Critical' 
+                                ? 'bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.5)] animate-pulse' 
+                                : issue.severity === 'High' 
+                                ? 'bg-orange-500 text-white shadow-[0_0_12px_rgba(249,115,22,0.4)]' 
+                                : issue.severity === 'Medium' 
+                                ? 'bg-amber-400 text-black shadow-[0_0_10px_rgba(245,158,11,0.3)]' 
+                                : 'bg-cyan-500 text-black shadow-[0_0_10px_rgba(6,182,212,0.3)]';
+                              return (
+                                <div key={idx} className={`border rounded-[28px] p-6 md:p-8 space-y-6 transition-all hover:translate-x-2 duration-500 ${sc} relative overflow-hidden`}>
+                                  <div className="absolute top-0 right-0 p-4 opacity-5">
+                                    {issue.source === 'local' ? <Database size={48} /> : <Cpu size={48} />}
                                   </div>
-                                  <div className="space-y-3">
-                                    <p className="text-[11px] font-black uppercase tracking-[0.3em] text-primary font-outfit">Neural Root Cause</p>
-                                    <p className="text-base text-slate-300 leading-relaxed font-medium">{issue.reason}</p>
+                                  <div className="flex flex-wrap items-center gap-4">
+                                    <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1.5 rounded-xl ${sb} shadow-neon`}>{issue.severity}</span>
+                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
+                                      {issue.source === 'local' ? <Database size={10} className="text-primary" /> : <Cpu size={10} className="text-eu-accent" />}
+                                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--eu-text-muted)] font-outfit">Source: {issue.source === 'local' ? 'Neural Cache' : 'AI Diagnostic'}</span>
+                                    </div>
+                                    <h4 className="text-xl md:text-2xl font-black text-[var(--eu-text-main)] font-outfit tracking-tight">{issue.title || issue.issue}</h4>
                                   </div>
-                                </div>
 
-                                <div className="p-6 bg-white/5 rounded-2xl border border-white/5 space-y-4">
-                                  <div className="flex items-center gap-3 mb-2">
-                                    <Terminal size={14} className="text-primary" />
-                                    <p className="text-[11px] font-black uppercase tracking-[0.3em] text-primary font-outfit">Tactical Remediation Steps</p>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-3">
+                                      <p className="text-[11px] font-black uppercase tracking-[0.3em] text-eu-accent font-outfit">Issue Signature</p>
+                                      <p className="text-base text-slate-300 leading-relaxed font-medium">{issue.issue}</p>
+                                    </div>
+                                    <div className="space-y-3">
+                                      <p className="text-[11px] font-black uppercase tracking-[0.3em] text-primary font-outfit">Neural Root Cause</p>
+                                      <p className="text-base text-slate-300 leading-relaxed font-medium">{issue.reason}</p>
+                                    </div>
                                   </div>
-                                  <div className="space-y-3">
-                                    {issue.fix?.map((step, sIdx) => (
-                                      <div key={sIdx} className="flex gap-4 items-start">
-                                        <div className="size-5 shrink-0 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-[10px] font-black text-primary">{sIdx + 1}</div>
-                                        <p className="text-sm text-slate-300 font-medium leading-relaxed opacity-80">{step}</p>
-                                      </div>
-                                    ))}
+
+                                  <div className="p-6 bg-white/5 rounded-2xl border border-white/5 space-y-4">
+                                    <div className="flex items-center gap-3 mb-2">
+                                      <Terminal size={14} className="text-primary" />
+                                      <p className="text-[11px] font-black uppercase tracking-[0.3em] text-primary font-outfit">Tactical Remediation Steps</p>
+                                    </div>
+                                    <div className="space-y-3">
+                                      {issue.fix?.map((step, sIdx) => (
+                                        <div key={sIdx} className="flex gap-4 items-start">
+                                          <div className="size-5 shrink-0 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-[10px] font-black text-primary">{sIdx + 1}</div>
+                                          <p className="text-sm text-slate-300 font-medium leading-relaxed opacity-80">{step}</p>
+                                        </div>
+                                      ))}
+                                    </div>
                                   </div>
-                                </div>
 
                                   <div className="flex flex-col sm:flex-row gap-3">
                                     {issue.remediationCode && (
@@ -792,21 +1016,52 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
                                       Ask Sentinel GPT
                                     </button>
                                   </div>
-                              </div>
-                            );
-                          })}
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-6 p-10 rounded-[32px] bg-primary/5 border border-primary/20 shadow-neon">
-                        <CheckCircle2 size={32} className="text-primary shrink-0" />
-                        <div>
-                          <p className="text-xl font-black text-primary font-outfit uppercase tracking-widest">Architectural Integrity Confirmed</p>
-                          <p className="text-sm text-[var(--eu-text-muted)] mt-1 font-medium italic">Sentinal AI has verified all nodes. No deviations from standard protocols were detected.</p>
+                      ) : (
+                        <div className="flex items-center gap-6 p-10 rounded-[32px] bg-primary/5 border border-primary/20 shadow-neon">
+                          <CheckCircle2 size={32} className="text-primary shrink-0" />
+                          <div>
+                            <p className="text-xl font-black text-primary font-outfit uppercase tracking-widest">Architectural Integrity Confirmed</p>
+                            <p className="text-sm text-[var(--eu-text-muted)] mt-1 font-medium italic">Sentinal AI has verified all nodes. No deviations from standard protocols were detected.</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* ── Autonomous Performance Booster Playbook ── */}
+                    {report.aiInsights?.performancePlaybook?.length > 0 && (
+                      <div className="mt-10 pt-8 border-t border-white/5 space-y-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
+                            <Zap size={16} />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-black uppercase tracking-widest text-white font-outfit">
+                              Autonomous Performance Booster Playbook
+                            </h4>
+                            <p className="text-[11px] text-slate-400 font-medium">
+                              Principal QA architectural roadmap to optimize Core Web Vitals (FCP, LCP, CLS) & throughput
+                            </p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {report.aiInsights.performancePlaybook.map((step, sIdx) => (
+                            <div key={sIdx} className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-amber-500/30 transition-all flex items-start gap-3.5 group">
+                              <span className="size-6 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-black flex items-center justify-center shrink-0 mt-0.5 font-outfit">
+                                {sIdx + 1}
+                              </span>
+                              <p className="text-xs text-slate-300 font-medium leading-relaxed group-hover:text-white transition-colors">
+                                {step}
+                              </p>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     )}
-                  </div>
 
                     <div className="flex gap-12 pt-10 border-t border-white/5 mt-12">
                       <div className="flex flex-col gap-2">
@@ -872,13 +1127,12 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
                       </div>
                       <p className="text-slate-500 text-xs font-medium ml-14">Comparison against your previous scan of this target.</p>
                     </div>
-                    <span className={`px-5 py-2 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] border shadow-neon ${
-                      report.comparison.stats.impact === 'Improved'
+                    <span className={`px-5 py-2 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] border shadow-neon ${report.comparison.stats.impact === 'Improved'
                         ? 'bg-green-500/10 border-green-500/30 text-green-400'
                         : report.comparison.stats.impact === 'Regressed'
-                        ? 'bg-red-500/10 border-red-500/30 text-red-400'
-                        : 'bg-white/5 border-white/10 text-slate-400'
-                    }`}>
+                          ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                          : 'bg-white/5 border-white/10 text-slate-400'
+                      }`}>
                       {report.comparison.stats.impact === 'Improved' ? '↑' : report.comparison.stats.impact === 'Regressed' ? '↓' : '→'} {report.comparison.stats.impact}
                     </span>
                   </div>
@@ -929,12 +1183,85 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
           )}
 
           {activeTab !== 'summary' && activeTab !== 'screenshots' && (
-            <motion.div key="table" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="glass p-6 rounded-2xl overflow-hidden">
-              <SectionHeader 
-                title={tabs.find(t => t.id === activeTab)?.label || 'Diagnostic'} 
-                icon={tabs.find(t => t.id === activeTab)?.icon || <Activity size={14} />} 
+            <motion.div key="table" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="glass p-6 rounded-2xl overflow-hidden space-y-4">
+              <SectionHeader
+                title={tabs.find(t => t.id === activeTab)?.label || 'Diagnostic'}
+                icon={tabs.find(t => t.id === activeTab)?.icon || <Activity size={14} />}
               />
-              <IssueTable data={getTabData(report, activeTab)} columns={getTableColumns(activeTab)} setRemediationCode={setRemediationCode} onAskAI={onAskAI} reportId={reportId} />
+
+              {/* Industry Telemetry Search & Triage Bar */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3 bg-[var(--eu-bg-card)] border border-[var(--eu-glass-border)] rounded-xl">
+                <div className="relative flex-1">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 opacity-60" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={`Search ${tabs.find(t => t.id === activeTab)?.label || 'findings'} by URL, status, or keyword...`}
+                    className="w-full bg-[var(--eu-bg-void)] border border-[var(--eu-glass-border)] rounded-lg pl-9 pr-4 py-2 text-xs text-[var(--eu-text-main)] placeholder-slate-500 focus:outline-none focus:border-[var(--eu-accent)] font-medium"
+                  />
+                  {searchQuery && (
+                    <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white text-xs">
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                  <span className="text-[9px] font-black uppercase text-slate-500 mr-1 tracking-widest">Filter:</span>
+                  {(() => {
+                    const currentTabItems = getTabData(report, activeTab) || [];
+                    const counts = {
+                      all: currentTabItems.length,
+                      critical: currentTabItems.filter(i => (i.severity || i.type || '').toString().toLowerCase().includes('crit')).length,
+                      high: currentTabItems.filter(i => (i.severity || i.type || '').toString().toLowerCase().includes('high')).length,
+                      medium: currentTabItems.filter(i => (i.severity || i.type || '').toString().toLowerCase().includes('med')).length,
+                      low: currentTabItems.filter(i => (i.severity || i.type || '').toString().toLowerCase().includes('low') || (i.severity || i.type || '').toString().toLowerCase().includes('info')).length,
+                    };
+
+                    return ['all', 'critical', 'high', 'medium', 'low'].map(sev => {
+                      const count = counts[sev] || 0;
+                      return (
+                        <button
+                          key={sev}
+                          onClick={() => setSeverityFilter(sev)}
+                          className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 ${
+                            severityFilter === sev
+                              ? 'bg-[var(--eu-accent)] text-white shadow-neon'
+                              : 'bg-[var(--eu-bg-void)] text-slate-400 border border-[var(--eu-glass-border)] hover:text-white'
+                          }`}
+                        >
+                          <span>{sev}</span>
+                          <span className={`text-[8px] px-1 py-0.2 rounded-full ${severityFilter === sev ? 'bg-white/20 text-white' : 'bg-white/5 text-slate-500'}`}>
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+
+              <IssueTable
+                data={(() => {
+                  let raw = getTabData(report, activeTab) || [];
+                  if (severityFilter !== 'all') {
+                    raw = raw.filter(item => {
+                      const sev = (item.severity || item.type || item.level || item.status || '').toString().toLowerCase();
+                      return sev.includes(severityFilter.toLowerCase());
+                    });
+                  }
+                  if (searchQuery && searchQuery.trim()) {
+                    const q = searchQuery.toLowerCase().trim();
+                    raw = raw.filter(item => JSON.stringify(item).toLowerCase().includes(q));
+                  }
+                  return raw;
+                })()}
+                columns={getTableColumns(activeTab)}
+                setRemediationCode={setRemediationCode}
+                onAskAI={onAskAI}
+                reportId={reportId}
+              />
             </motion.div>
           )}
 
@@ -948,9 +1275,9 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
                     <div className="aspect-video overflow-hidden rounded-xl bg-[var(--eu-bg-void)]/60 border border-white/5 shadow-inner relative cursor-pointer" onClick={() => setPreviewImage(s)}>
                       <img src={`${API_BASE}${s.path}`} alt={s.page} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 grayscale group-hover:grayscale-0" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex flex-col justify-end p-3">
-                         <div className="flex gap-2 mb-2">
-                           {pageIssues.length > 0 && <span className="px-2 py-0.5 rounded-md bg-primary text-[7px] font-black text-white shadow-neon">{pageIssues.length} ISSUES FOUND</span>}
-                         </div>
+                        <div className="flex gap-2 mb-2">
+                          {pageIssues.length > 0 && <span className="px-2 py-0.5 rounded-md bg-primary text-[7px] font-black text-white shadow-neon">{pageIssues.length} ISSUES FOUND</span>}
+                        </div>
                         <p className="text-[10px] font-black text-white uppercase tracking-widest truncate">{s.page}</p>
                       </div>
                     </div>
@@ -1000,67 +1327,67 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
             >
               {/* Left Side: Visual Context */}
               <div className="flex-[3] relative bg-[var(--eu-bg-void)] border-r border-white/5 overflow-hidden flex items-center justify-center group">
-                 <img src={`${API_BASE}${previewImage.path}`} alt="Neural Preview" className="max-w-full max-h-full object-contain shadow-2xl transition-transform duration-500 group-hover:scale-105" />
-                 <div className="absolute top-6 left-6 flex items-center gap-3">
-                    <div className="px-5 py-2 bg-eu-accent text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-neon">Tactical Snapshot</div>
-                    <div className="px-5 py-2 bg-white/5 border border-white/10 text-white/50 text-[10px] font-black uppercase tracking-widest rounded-xl backdrop-blur-md">{previewImage.page}</div>
-                 </div>
-                 <button onClick={() => setPreviewImage(null)} className="absolute top-6 right-6 size-12 hover:bg-white/5 rounded-2xl flex items-center justify-center text-white/40 hover:text-white transition-all">
-                    <X size={24} />
-                 </button>
+                <img src={`${API_BASE}${previewImage.path}`} alt="Neural Preview" className="max-w-full max-h-full object-contain shadow-2xl transition-transform duration-500 group-hover:scale-105" />
+                <div className="absolute top-6 left-6 flex items-center gap-3">
+                  <div className="px-5 py-2 bg-eu-accent text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-neon">Tactical Snapshot</div>
+                  <div className="px-5 py-2 bg-white/5 border border-white/10 text-white/50 text-[10px] font-black uppercase tracking-widest rounded-xl backdrop-blur-md">{previewImage.page}</div>
+                </div>
+                <button onClick={() => setPreviewImage(null)} className="absolute top-6 right-6 size-12 hover:bg-white/5 rounded-2xl flex items-center justify-center text-white/40 hover:text-white transition-all">
+                  <X size={24} />
+                </button>
               </div>
 
               {/* Right Side: Tactical Error Feed */}
               <div className="flex-[2] flex flex-col h-full bg-black/40 backdrop-blur-md border-l border-white/10">
-                 <div className="p-8 border-b border-white/5">
-                    <div className="flex items-center gap-3 mb-2">
-                       <Activity size={18} className="text-eu-accent" />
-                       <h3 className="text-xl font-black uppercase tracking-widest text-white">Visual Audit Lab</h3>
-                    </div>
-                    <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">{getAllIssuesForPage(report, previewImage.page).length} Neural Failures Aligned to URL</p>
-                 </div>
+                <div className="p-8 border-b border-white/5">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Activity size={18} className="text-eu-accent" />
+                    <h3 className="text-xl font-black uppercase tracking-widest text-white">Visual Audit Lab</h3>
+                  </div>
+                  <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">{getAllIssuesForPage(report, previewImage.page).length} Neural Failures Aligned to URL</p>
+                </div>
 
-                 <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4">
-                    {getAllIssuesForPage(report, previewImage.page).length > 0 ? (
-                      getAllIssuesForPage(report, previewImage.page).map((issue, idx) => (
-                        <div key={idx} className="p-5 bg-white/5 border border-white/5 rounded-[24px] hover:border-eu-accent/30 transition-all group">
-                           <div className="flex items-center gap-3 mb-3">
-                              <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-md bg-black/40 border border-white/10 ${issue._color}`}>
-                                {issue._source}
-                              </span>
-                              {issue.severity && (
-                                <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-md bg-black/40 border border-white/10 ${issue.severity === 'High' || issue.severity === 'Critical' ? 'text-primary' : 'text-yellow-400'}`}>
-                                  {issue.severity}
-                                </span>
-                              )}
-                           </div>
-                           <p className="text-xs font-black text-white/90 mb-2 leading-relaxed">{issue.message || issue.issue || issue.status + ' ' + (issue.type || 'Error')}</p>
-                           {issue.recommendation && (
-                             <p className="text-[10px] text-white/40 font-medium leading-relaxed group-hover:text-white/60 transition-colors uppercase tracking-tight italic">Fix: {issue.recommendation}</p>
-                           )}
-                           {issue.url && <p className="text-[8px] text-eu-accent/40 font-mono mt-3 truncate">{issue.url}</p>}
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4">
+                  {getAllIssuesForPage(report, previewImage.page).length > 0 ? (
+                    getAllIssuesForPage(report, previewImage.page).map((issue, idx) => (
+                      <div key={idx} className="p-5 bg-white/5 border border-white/5 rounded-[24px] hover:border-eu-accent/30 transition-all group">
+                        <div className="flex items-center gap-3 mb-3">
+                          <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-md bg-black/40 border border-white/10 ${issue._color}`}>
+                            {issue._source}
+                          </span>
+                          {issue.severity && (
+                            <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-md bg-black/40 border border-white/10 ${issue.severity === 'High' || issue.severity === 'Critical' ? 'text-primary' : 'text-yellow-400'}`}>
+                              {issue.severity}
+                            </span>
+                          )}
                         </div>
-                      ))
-                    ) : (
-                      <div className="h-full flex flex-col items-center justify-center opacity-20 text-center -mt-10">
-                         <Zap size={48} className="mb-4" />
-                         <p className="text-[10px] font-black uppercase tracking-widest px-10">No specific failures synchronized for this visual capture.</p>
+                        <p className="text-xs font-black text-white/90 mb-2 leading-relaxed">{issue.message || issue.issue || issue.status + ' ' + (issue.type || 'Error')}</p>
+                        {issue.recommendation && (
+                          <p className="text-[10px] text-white/40 font-medium leading-relaxed group-hover:text-white/60 transition-colors uppercase tracking-tight italic">Fix: {issue.recommendation}</p>
+                        )}
+                        {issue.url && <p className="text-[8px] text-eu-accent/40 font-mono mt-3 truncate">{issue.url}</p>}
                       </div>
-                    )}
-                 </div>
+                    ))
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center opacity-20 text-center -mt-10">
+                      <Zap size={48} className="mb-4" />
+                      <p className="text-[10px] font-black uppercase tracking-widest px-10">No specific failures synchronized for this visual capture.</p>
+                    </div>
+                  )}
+                </div>
 
-                 <div className="p-8 bg-eu-accent/5 border-t border-white/5">
-                    <p className="text-[9px] font-black text-eu-accent uppercase tracking-widest mb-1">Diagnostic Context</p>
-                    <p className="text-[11px] font-black text-white/60 uppercase">
-                      Manual remediation required for neural path: {(() => {
-                        try {
-                          return new URL(previewImage.page).pathname;
-                        } catch (e) {
-                          return previewImage.page || 'Root';
-                        }
-                      })()}
-                    </p>
-                 </div>
+                <div className="p-8 bg-eu-accent/5 border-t border-white/5">
+                  <p className="text-[9px] font-black text-eu-accent uppercase tracking-widest mb-1">Diagnostic Context</p>
+                  <p className="text-[11px] font-black text-white/60 uppercase">
+                    Manual remediation required for neural path: {(() => {
+                      try {
+                        return new URL(previewImage.page).pathname;
+                      } catch (e) {
+                        return previewImage.page || 'Root';
+                      }
+                    })()}
+                  </p>
+                </div>
               </div>
             </motion.div>
           </motion.div>

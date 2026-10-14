@@ -4,6 +4,13 @@ const crawler = require('./crawler');
 const path = require('path');
 const linkGuardian = require('./linkGuardian');
 const axios = require('axios');
+const secretSniffer = require('./secretSniffer');
+const { scanInteractions } = require('./interactionScanner');
+const { auditLayout } = require('./layoutAuditor');
+const { auditStorage } = require('./storageAuditor');
+const { fuzzEdgeCases } = require('./edgeCaseFuzzer');
+const { auditResponsiveMatrix } = require('./responsiveMatrixAuditor');
+const { auditPerformance } = require('./performanceOptimizer');
 
 // Import Specialist Agents
 const fs = require('fs');
@@ -27,11 +34,13 @@ const withTimeout = (promise, ms, taskName) => {
 const scanConsole = async (page) => {
     const logs = [];
     page.on('console', msg => {
-        if (msg.type() === 'error' || msg.type() === 'warning') {
+        if (msg.type() === 'error') {
+            const text = msg.text();
+            if (text.includes('[HMR]') || text.includes('[WDS]') || text.includes('React DevTools')) return;
             logs.push({
                 page: page.url(),
-                message: msg.text().substring(0, 500),
-                type: msg.type(),
+                message: text.substring(0, 500),
+                type: 'error',
                 location: msg.location().url || 'inline'
             });
         }
@@ -155,50 +164,32 @@ const scanUI = async (page) => {
             }
         });
 
-        // 4. Interactive Target Integrity
-        const interactive = Array.from(document.querySelectorAll('a, button, input[type=\"button\"], input[type=\"submit\"]'));
-        interactive.forEach(el => {
+        // 4. Interactive Target Integrity (Only audit standalone buttons and primary CTAs, avoid inline text links)
+        const buttons = Array.from(document.querySelectorAll('button, [role="button"], input[type="button"], input[type="submit"]'));
+        buttons.forEach(el => {
             const rect = el.getBoundingClientRect();
             
-            if (rect.width > 0 && rect.height > 0 && (rect.width < 32 || rect.height < 32)) {
+            if (rect.width >= 12 && rect.height >= 12 && (rect.width < 32 || rect.height < 32)) {
                 addIssue(el, {
                     type: 'UX_MOBILE',
-                    issue: 'Small touch target detected',
+                    issue: 'Small button touch target (<32px)',
                     severity: 'Low',
                     selector: generateIdentifiableSelector(el),
-                    technicalImpact: 'Sub-optimal mobile experience. Touch targets below 44px (or 10mm) increase user error rates on smaller viewports.',
-                    recommendation: 'Increase target size to at least 44x44px for optimal mobile UX.'
+                    technicalImpact: 'Sub-optimal mobile experience. Buttons below 32px increase user tap error rates on mobile viewports.',
+                    recommendation: 'Increase button size to at least 44x44px for optimal mobile touch ergonomics.'
                 });
             }
 
             const hasIcon = el.querySelector('svg, img, i, span, em');
-            if ((el.tagName === 'BUTTON' || el.tagName === 'A') && !el.innerText?.trim() && !el.getAttribute('aria-label') && !hasIcon) {
+            if (!el.innerText?.trim() && !el.getAttribute('aria-label') && !hasIcon) {
                 addIssue(el, {
                     type: 'UX_VISUAL',
-                    issue: 'Empty interactive element detected',
+                    issue: 'Empty button detected (No text or icon)',
                     severity: 'Medium',
                     selector: generateIdentifiableSelector(el),
-                    technicalImpact: 'Interaction dead-end. Without labels or icons, users cannot identify the purpose of this element.',
+                    technicalImpact: 'Interaction dead-end. Without labels or icons, users cannot identify the purpose of this button.',
                     recommendation: 'Ensure all buttons have visible text, an icon, or an aria-label.'
                 });
-            }
-        });
-
-        // 5. Layout Shift (CLS)
-        const media = Array.from(document.querySelectorAll('img, video')).slice(0, 10);
-        media.forEach(m => {
-            const rect = m.getBoundingClientRect();
-            if (rect.width > 100 && rect.height > 100) {
-                if (!m.getAttribute('width') || !m.getAttribute('height')) {
-                    addIssue(m, {
-                        type: 'PERF_STABILITY',
-                        issue: 'Potential Layout Shift (CLS)',
-                        severity: 'Low',
-                        selector: m.tagName === 'IMG' ? m.src : m.tagName.toLowerCase(),
-                        technicalImpact: 'Cumulative Layout Shift (CLS) risk. Missing dimensions cause page jumps during asset loading, lowering Core Web Vitals score.',
-                        recommendation: 'Add explicit width and height attributes.'
-                    });
-                }
             }
         });
 
@@ -298,33 +289,25 @@ const runSinglePageScan = async (reportId, url, scannedModules = [], emitProgres
         }
 
         const rawConsole = [];
-        
-        // [USER REQUEST]: Hardcode Firebase error for specific URL
-        if (url.includes('sudhanshunijap.vercel.app')) {
-            rawConsole.push({
-                page: url,
-                message: '@firebase/firestore: Firestore (12.6.0): Uncaught Error in snapshot listener: FirebaseError: [code=permission-denied]: Missing or insufficient permissions.',
-                type: 'error',
-                location: 'index-BSQREPFy.js:371',
-                recommendation: 'Update Firestore security rules or handle unauthenticated users.'
-            });
-        }
-
         const rawNetwork = [];
+        const securityIssues = [];
+        const failedApiEndpoints = [];
         let totalSize = 0;
         let requestCount = 0;
 
         page.on('console', msg => {
-            if (msg.type() === 'error' || msg.type() === 'warning') {
+            // High-Signal Filter: Only capture real errors, ignore trivial dev warnings and violations
+            if (msg.type() === 'error') {
+                const text = msg.text();
+                if (text.includes('[HMR]') || text.includes('[WDS]') || text.includes('React DevTools')) return;
+
                 const errorLocation = msg.location().url || '';
-                
-                // Allow all errors (even 3rd party like Firebase) so they are visible in report
                 rawConsole.push({
                     page: url,
-                    message: msg.text().substring(0, 500),
-                    type: msg.type(),
+                    message: text.substring(0, 500),
+                    type: 'error',
                     location: errorLocation || 'inline',
-                    recommendation: 'Fix script failure or check third-party integration.'
+                    recommendation: 'Fix JavaScript runtime failure or verify API payload handling.'
                 });
             }
         });
@@ -345,15 +328,85 @@ const runSinglePageScan = async (reportId, url, scannedModules = [], emitProgres
             try {
                 const size = parseInt(response.headers()['content-length'] || '0');
                 totalSize += size;
+                const reqUrl = response.url();
+                const resourceType = response.request().resourceType();
+                const contentType = response.headers()['content-type'] || '';
+
                 if (status >= 400) {
-                    rawNetwork.push({
-                        page: url,
-                        method: response.request().method(),
-                        url: response.url(),
-                        status,
-                        type: response.request().resourceType(),
-                        recommendation: status === 404 ? 'Asset not found.' : 'Request failed.'
-                    });
+                    // Noise Filter: Ignore 3rd-party ad-trackers and favicon 404s
+                    const isNoise = [
+                        'google-analytics', 'googletagmanager', 'doubleclick', 'facebook.net',
+                        'hotjar', 'clarity.ms', 'segment.io', 'favicon.ico'
+                    ].some(noise => reqUrl.includes(noise));
+
+                    if (!isNoise) {
+                        rawNetwork.push({
+                            page: url,
+                            method: response.request().method(),
+                            url: reqUrl,
+                            status,
+                            type: resourceType,
+                            recommendation: status === 404 ? 'Asset or endpoint not found.' : 'Server or request failure.'
+                        });
+
+                        // ── Advanced API Telemetry & Stack Trace Inspection ──
+                        if (resourceType === 'fetch' || resourceType === 'xhr' || contentType.includes('application/json')) {
+                            failedApiEndpoints.push({
+                                method: response.request().method(),
+                                url: reqUrl,
+                                status
+                            });
+
+                            response.text().then(body => {
+                                if (body && body.length > 20) {
+                                    const stackPatterns = [
+                                        /at\s+[a-zA-Z0-9_\.]+\s+\([^\)]+:\d+:\d+\)/,
+                                        /Traceback\s+\(most recent call last\):/,
+                                        /(SequelizeDatabaseError|MongoServerError|PostgreSQL query failed|SQLException)/i,
+                                        /SyntaxError:\s+Unexpected token/
+                                    ];
+                                    const hasStack = stackPatterns.some(p => p.test(body));
+                                    if (hasStack) {
+                                        securityIssues.push({
+                                            page: url,
+                                            type: 'SERVER_STACK_TRACE_LEAK',
+                                            issue: `Internal server stack trace / database error leaked in API response (${status})`,
+                                            severity: 'Critical',
+                                            selector: reqUrl,
+                                            details: body.substring(0, 350),
+                                            technicalImpact: 'Critical CWE-209 flaw. API error body exposes internal backend file paths, framework details, or database schemas.',
+                                            suggestedFix: 'Implement production error handling middleware to sanitize API error responses and log details server-side only.'
+                                        });
+                                    }
+                                }
+                            }).catch(() => {});
+                        }
+                    }
+                }
+
+                // ── Secret & Sensitive Data Sniffer ──
+                const respUrl = reqUrl;
+
+                if (status === 200 && (resourceType === 'script' || respUrl.endsWith('.js') || contentType.includes('javascript'))) {
+                    response.text().then(scriptBody => {
+                        if (scriptBody) {
+                            const leaks = secretSniffer.auditScriptContent(scriptBody, respUrl, url);
+                            if (leaks.length > 0) securityIssues.push(...leaks);
+                        }
+                    }).catch(() => {});
+
+                    secretSniffer.checkSourceMapExposure(respUrl, url).then(mapIssue => {
+                        if (mapIssue) securityIssues.push(mapIssue);
+                    }).catch(() => {});
+                }
+
+                if (status === 200 && (contentType.includes('application/json') || resourceType === 'fetch' || resourceType === 'xhr')) {
+                    response.json().then(jsonBody => {
+                        if (jsonBody) {
+                            const leaks = secretSniffer.auditJsonResponse(jsonBody, respUrl, url);
+                            if (leaks.length > 0) securityIssues.push(...leaks);
+                        }
+                    }).catch(() => {});
                 }
             } catch (_) {}
         });
@@ -420,20 +473,99 @@ const runSinglePageScan = async (reportId, url, scannedModules = [], emitProgres
             return page.screenshot({ path: screenshotPath, fullPage: false, timeout: 15000 });
         });
 
+        // ── 1. Silent API Failure Detection ──
+        if (failedApiEndpoints.length > 0) {
+            const hasVisibleErrorState = await page.evaluate(() => {
+                const errorSelectors = [
+                    '[role="alert"]', '.toast', '.alert', '[class*="alert"]', 
+                    '[class*="toast"]', '[class*="error-banner"]', '[class*="error-message"]',
+                    '.notification', '.snackbar'
+                ];
+                return errorSelectors.some(sel => {
+                    const els = document.querySelectorAll(sel);
+                    return Array.from(els).some(el => {
+                        const r = el.getBoundingClientRect();
+                        return r.width > 20 && r.height > 10 && window.getComputedStyle(el).display !== 'none';
+                    });
+                });
+            }).catch(() => false);
+
+            if (!hasVisibleErrorState) {
+                for (const failedApi of failedApiEndpoints.slice(0, 3)) {
+                    rawNetwork.push({
+                        page: url,
+                        method: failedApi.method,
+                        url: failedApi.url,
+                        status: failedApi.status,
+                        type: 'SILENT_API_FAILURE',
+                        severity: 'High',
+                        issue: `Silent API failure: ${failedApi.method} ${failedApi.url} (${failedApi.status}) returned error with zero visible UI feedback`,
+                        technicalImpact: `Severe UX bug. An essential background API request failed with status ${failedApi.status}, but the interface presented no error toast, banner, or retry state to the user, causing a stalled or broken view.`,
+                        recommendation: 'Attach error handling callbacks (try/catch or HTTP interceptor) to render user-facing error notifications when network requests fail.'
+                    });
+                }
+            }
+        }
+
+        // ── 2. Client Storage & Token Leak Audit ──
+        emitProgress(35, 'Auditing client-side storage for token & session leaks...');
+        const storageIssues = await auditStorage(page, url).catch(() => []);
+        if (storageIssues.length > 0) {
+            securityIssues.push(...storageIssues);
+        }
+
+        // ── 3. Enhanced Form Fuzzer & State Diagnostics ──
         let formIssues = [];
         if (scannedModules.includes('forms') || scannedModules.includes('ui')) {
-            emitProgress(40, 'Auditing form interaction layers...');
+            emitProgress(40, 'Auditing form interaction layers & boundary validation...');
             const formScanner = require('./formScanner');
             formIssues = await formScanner.scanForms(page);
         }
 
         const uiIssues = scannedModules.includes('ui') ? await scanUI(page).catch(() => []) : [];
+
+        // ── 4. Advanced Visual Collision & Click Interception Audit ──
+        emitProgress(44, 'Auditing viewport collisions, click interception & clipped content...');
+        const layoutIssues = await auditLayout(page, url).catch(() => []);
+        if (layoutIssues.length > 0) {
+            uiIssues.push(...layoutIssues);
+        }
+
+        // ── 5. Autonomous Dead-Click & Interaction Audit ──
+        emitProgress(48, 'Auditing interactive buttons for dead-clicks & crashes...');
+        const interactionIssues = await scanInteractions(page, url).catch(() => []);
+        if (interactionIssues.length > 0) {
+            uiIssues.push(...interactionIssues);
+        }
+
+        // ── 6. Autonomous Boundary, Security & Edge-Case Fuzzing ──
+        emitProgress(52, 'Injecting edge-case fuzzing payloads & boundary stress tests...');
+        const fuzzIssues = await fuzzEdgeCases(page, url).catch(() => []);
+        if (fuzzIssues.length > 0) {
+            formIssues.push(...fuzzIssues);
+        }
+
+        // ── 7. Multi-Viewport & Mobile Stress Matrix ──
+        emitProgress(56, 'Auditing mobile (375px) responsive matrix & tap target collisions...');
+        const responsiveIssues = await auditResponsiveMatrix(page, url).catch(() => []);
+        if (responsiveIssues.length > 0) {
+            uiIssues.push(...responsiveIssues);
+        }
+
+        // ── 8. Website Performance & Architectural Optimization Engine ──
+        emitProgress(60, 'Auditing asset bloat, oversized images & render-blocking scripts...');
+        const perfIssues = await auditPerformance(page, url).catch(() => []);
+        if (perfIssues.length > 0) {
+            uiIssues.push(...perfIssues);
+        }
+
         const results = {
             url,
             consoleErrors: rawConsole,
             networkLogs: rawNetwork,
             uiIssues: uiIssues.map(u => ({ ...u, page: url })),
             formIssues: formIssues.map(f => ({ ...f, page: url })),
+            securityIssues: securityIssues.map(s => ({ ...s, page: url })),
             loadTime,
             totalSize,
             requestCount,
@@ -506,8 +638,8 @@ const runTargetedCrawlScan = async (reportId, url, tests, emitProgress, scope = 
     
     const pages = await crawler.crawlWebsite(reportId, url, emitProgress, { 
         scope: scope,
-        maxPages: scope === 'site' ? 10 : 1, 
-        maxDepth: scope === 'site' ? 2 : 0 
+        maxPages: scope === 'site' ? 30 : 1, 
+        maxDepth: scope === 'site' ? 3 : 0 
     });
     
     const auditLimit = 15;
@@ -519,6 +651,7 @@ const runTargetedCrawlScan = async (reportId, url, tests, emitProgress, scope = 
         networkLogs: [],
         uiIssues: [],
         formIssues: [],
+        securityIssues: [],
         screenshots: [],
         accessibilityIssues: [],
         lighthouseScores: null,
@@ -559,6 +692,7 @@ const runTargetedCrawlScan = async (reportId, url, tests, emitProgress, scope = 
                     siteLogs.networkLogs.push(...result.networkLogs);
                     siteLogs.uiIssues.push(...result.uiIssues);
                     siteLogs.formIssues.push(...result.formIssues);
+                    siteLogs.securityIssues.push(...(result.securityIssues || []));
                     if (result.screenshot) {
                         siteLogs.screenshots.push(result.screenshot);
                     }
@@ -578,6 +712,7 @@ const runTargetedCrawlScan = async (reportId, url, tests, emitProgress, scope = 
             consoleErrors: siteLogs.consoleErrors,
             uiIssues: siteLogs.uiIssues,
             formIssues: siteLogs.formIssues,
+            securityIssues: siteLogs.securityIssues,
             networkLogs: siteLogs.networkLogs,
             screenshots: siteLogs.screenshots,
             lighthouseScores: siteLogs.lighthouseScores,
@@ -611,12 +746,14 @@ const persistScanData = async (reportId, results) => {
     const finalUI = prune(results.uiIssues, u => `${u.type}|${u.issue}|${u.selector}|${u.location}`);
     const finalForms = prune(results.formIssues, f => `${f.formName}|${f.type}|${f.fieldName}`);
     const finalConsole = prune(results.consoleErrors, c => `${c.message}|${c.location}`);
+    const finalSecurity = prune(results.securityIssues || [], s => `${s.issue}|${s.selector}`);
 
     await ScanReport.findByIdAndUpdate(reportId, {
         $set: {
             consoleErrors: finalConsole.slice(0, 100),
             uiIssues: finalUI.slice(0, 100),
             formIssues: finalForms.slice(0, 100),
+            securityIssues: finalSecurity.slice(0, 100),
             accessibilityIssues: (results.accessibilityIssues || []).slice(0, 100),
             lighthouseScores: results.lighthouseScores,
             networkLogs: (results.networkLogs || []).slice(0, 200),

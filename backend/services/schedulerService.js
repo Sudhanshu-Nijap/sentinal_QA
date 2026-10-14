@@ -1,21 +1,24 @@
 const Job = require('../models/Job');
-// Circular Dependency Shield: runFullScan is required inside executive methods
-// instead of top-level to prevent server startup deadlocks.
 const ScanReport = require('../models/ScanReport');
 const Chat = require('../models/Chat');
 
 /**
  * Tactical Scheduler Service
- * Manages the lifecycle of scheduled neural scans.
+ * Manages the lifecycle of scheduled neural scans with memory-locked concurrent protection.
  */
 class SchedulerService {
     constructor() {
-        this.jobRegistry = new Map(); // jobId -> Timeout/Interval reference
+        this.runningJobs = new Set(); // Tracks actively executing job IDs in memory
         this.checkInterval = null;
+        this.stats = {
+            totalExecutions: 0,
+            failedExecutions: 0,
+            lastRunTime: null
+        };
     }
 
     /**
-     * Initializes the scheduler by loading all active jobs from the database.
+     * Initializes the scheduler substrate
      */
     async init() {
         console.log('[Scheduler]: Initializing tactical job substrate...');
@@ -24,25 +27,24 @@ class SchedulerService {
 
     /**
      * Periodically checks for jobs that need execution.
-     * Checks every 60 seconds.
+     * 15-second precision tick rate for tactical timing.
      */
     startWatcher() {
         if (this.checkInterval) clearInterval(this.checkInterval);
         
         this.checkInterval = setInterval(() => {
             this.processPendingJobs();
-        }, 15000); // 15 second precision for better tactical response
+        }, 15000);
 
-        // Run immediately on start
+        // Run immediately on startup
         this.processPendingJobs();
     }
 
     /**
-     * Analyzes all active jobs and triggers those whose time has come.
+     * Analyzes active database jobs and triggers scheduled runs.
      */
     async processPendingJobs() {
         try {
-            // Normalize current time to IST (Asia/Kolkata) for tactical alignment
             const now = new Date();
             const istTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
             
@@ -55,13 +57,17 @@ class SchedulerService {
             });
             const currentDate = istTime.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }); // YYYY-MM-DD
 
-            // Find jobs that are active and not currently running
+            // Query active jobs not currently running in DB
             const jobs = await Job.find({ 
                 isActive: true, 
                 status: { $ne: 'running' } 
             });
 
             for (const job of jobs) {
+                const jobIdStr = job._id.toString();
+                // Skip if job is already locked in local execution memory
+                if (this.runningJobs.has(jobIdStr)) continue;
+
                 let shouldRun = false;
 
                 if (job.mode === 'one-time') {
@@ -79,13 +85,12 @@ class SchedulerService {
                 }
 
                 if (shouldRun) {
-                    // Check if we haven't already run it in the same minute
                     const lastRunAt = job.lastRun ? new Date(job.lastRun) : null;
                     if (lastRunAt && (now - lastRunAt) < 61000) {
-                        continue; // Already triggered this minute
+                        continue; // Already triggered within current minute
                     }
 
-                    console.log(`[Scheduler]: Triggering ${job.scanType} scan for ${job.url} (Job: ${job._id})`);
+                    console.log(`[Scheduler]: Triggering ${job.scanType} scan for ${job.url} (Job: ${jobIdStr})`);
                     this.executeJob(job);
                 }
             }
@@ -95,38 +100,40 @@ class SchedulerService {
     }
 
     /**
-     * Dispatches the job to the scan engine.
+     * Dispatches job execution to the scan engine with lock handling
      */
-    async executeJob(job) {
+    async executeJob(job, retryCount = 0) {
+        const jobIdStr = job._id.toString();
+        this.runningJobs.add(jobIdStr);
+
         try {
             job.status = 'running';
             job.lastRun = new Date();
             await job.save();
+            this.stats.totalExecutions++;
+            this.stats.lastRunTime = new Date();
 
-            // Prepare tactical parameters
             const tests = job.scanType === 'full' 
                 ? ['console', 'network', 'lighthouse', 'accessibility', 'links', 'ui', 'forms']
                 : ['console', 'network', 'ui', 'lighthouse', 'accessibility'];
             const mode = job.scanType === 'full' ? 'full' : 'specific';
             const scope = job.scanType === 'full' ? 'site' : 'single';
 
-            // ── CHAT INTEGRATION ──────────────────────────────────────────
-            // Find or initialize the permanent chat thread for this URL
+            // 1. Permanent chat thread lookup or creation
             let chat = await Chat.findOne({ url: job.url, userId: job.userId });
             if (!chat) {
-                console.log(`[Scheduler]: Initializing brand-new Neural Chat for ${job.url}`);
                 chat = new Chat({ url: job.url, userId: job.userId });
                 await chat.save();
             }
 
-            // Find baseline report for comparison
+            // 2. Previous baseline report lookup
             const previousReport = await ScanReport.findOne({ 
                 url: job.url, 
                 userId: job.userId, 
                 status: 'completed' 
             }).sort({ createdAt: -1 });
 
-            // Create initial report entry
+            // 3. Create active ScanReport entry
             const report = new ScanReport({
                 url: job.url,
                 userId: job.userId,
@@ -138,8 +145,29 @@ class SchedulerService {
             });
             await report.save();
 
-            // ── SOCKET EMISSION ──────────────────────────────────────────
-            // Run scan async via existing worker infrastructure
+            // 4. Socket real-time telemetry emission
+            if (global.io) {
+                global.io.emit('job-sync', { 
+                    jobId: jobIdStr, 
+                    reportId: report._id.toString(), 
+                    status: 'running',
+                    lastRun: job.lastRun
+                });
+
+                global.io.emit('scan-progress', {
+                    reportId: report._id.toString(),
+                    percent: 0,
+                    stage: 'Initializing autonomous scan...',
+                    status: 'in-progress'
+                });
+
+                global.io.to(`user_${job.userId.toString()}`).emit('report-update', {
+                    type: 'scan_started',
+                    reportId: report._id.toString()
+                });
+            }
+
+            // 5. Run async scan pipeline
             const { runFullScan } = require('../routes/scanRoutes');
             runFullScan(
                 report._id, 
@@ -149,60 +177,42 @@ class SchedulerService {
                 tests, 
                 scope, 
                 mode,
-                chat._id, // Pass permanent chat ID
-                previousReport?._id // Pass previous report ID for delta calculation
-            ).catch(e => {
+                chat._id,
+                previousReport?._id
+            ).catch(async (e) => {
                 console.error(`[Scheduler Task Failure]: ${e.message}`);
+                this.stats.failedExecutions++;
+                if (retryCount < 1) {
+                    console.log(`[Scheduler]: Retrying job ${jobIdStr} (Attempt ${retryCount + 1})...`);
+                    this.runningJobs.delete(jobIdStr);
+                    return this.executeJob(job, retryCount + 1);
+                }
                 job.status = 'failed';
-                job.save();
+                await job.save();
+                this.runningJobs.delete(jobIdStr);
+            }).finally(() => {
+                // Release lock after scan finishes
+                this.runningJobs.delete(jobIdStr);
             });
-
-            // ── SOCKET EMISSION ──────────────────────────────────────────
-            // Notify UI that a job has started executing
-            if (global.io) {
-                // 1. Job-Sync: Update the Scheduling Dashboard entry
-                global.io.emit('job-sync', { 
-                    jobId: job._id.toString(), 
-                    reportId: report._id.toString(), 
-                    status: 'running',
-                    lastRun: job.lastRun
-                });
-
-                // 2. Scan-Progress: Wake up the Global Progress Bar immediately (0%)
-                global.io.emit('scan-progress', {
-                    reportId: report._id.toString(),
-                    percent: 0,
-                    stage: 'Initializing autonomous scan...',
-                    status: 'in-progress'
-                });
-
-                // 3. Report-Update: Trigger a global refresh of the History Lattice
-                global.io.to(`user_${job.userId.toString()}`).emit('report-update', {
-                    type: 'scan_started',
-                    reportId: report._id.toString()
-                });
-            }
-
-            // Note: Job status and isActive are now managed when the scan worker exits (scanRoutes.js)
-            // to ensure accurate dashboard feedback.
 
         } catch (error) {
             console.error(`[Job Execution Error]: ${error.message}`);
+            this.stats.failedExecutions++;
             job.status = 'failed';
             await job.save();
+            this.runningJobs.delete(jobIdStr);
         }
     }
 
     /**
-     * Manually stop/remove a job from the registry.
+     * Cancels / removes job from memory registry
      */
     async removeJob(jobId) {
-        if (this.jobRegistry.has(jobId)) {
-            // If it was using cron, we would stop the task here
-            this.jobRegistry.delete(jobId);
-        }
+        const idStr = jobId.toString();
+        this.runningJobs.delete(idStr);
     }
 }
 
 const scheduler = new SchedulerService();
 module.exports = scheduler;
+

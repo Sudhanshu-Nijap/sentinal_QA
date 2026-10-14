@@ -328,7 +328,7 @@ const TopicModal = ({ topic, onClose, isBookmarked, isCompleted, onToggleBookmar
               <span className="text-[10px] font-black uppercase tracking-[0.2em]">Neural Sequence</span>
             </div>
             <div className="bg-black/80 rounded-3xl p-6 border border-white/5 font-mono text-sm leading-relaxed overflow-x-auto">
-              <pre className="text-pink-400">{topic.example}</pre>
+              <pre className="text-indigo-400">{topic.example}</pre>
             </div>
           </section>
 

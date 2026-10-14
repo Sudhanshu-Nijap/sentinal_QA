@@ -1,13 +1,14 @@
 import { API_URL, SOCKET_URL } from '../config/api';
 import React, { useState } from 'react';
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion';
-import { Search, Globe, Shield, Sparkles, ArrowRight, Loader2, Zap, Target, Cpu } from 'lucide-react';
+import { Globe, Sparkles, ArrowRight, Loader2, Target, Calendar } from 'lucide-react';
 import axios from 'axios';
 
 const ScanForm = ({ onScanStarted }) => {
   const [url, setUrl] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [scope, setScope] = useState('site'); // 'site' (crawls all pages) or 'single' (only target URL)
   const [chaosIntensity, setChaosIntensity] = useState('standard');
   const [showScheduling, setShowScheduling] = useState(false);
   const [schedule, setSchedule] = useState({
@@ -101,7 +102,8 @@ const ScanForm = ({ onScanStarted }) => {
         const response = await axios.post(`${API_URL}/api/scan`, { 
           url: targetUrl, 
           userId,
-          chaosIntensity 
+          chaosIntensity,
+          scope
         });
         onScanStarted(response.data.reportId);
         setUrl('');
@@ -143,23 +145,23 @@ const ScanForm = ({ onScanStarted }) => {
                     setUrl(e.target.value);
                     if (error) setError('');
                   }}
-                  placeholder="Infrastructure URL (e.g., https://example.com)"
-                  className="w-full h-14 sm:h-16 bg-transparent border-none pl-12 sm:pl-16 pr-4 sm:pr-6 text-sm sm:text-lg font-bold focus:outline-none text-[var(--eu-text-main)] placeholder-[var(--eu-text-main)] placeholder:opacity-20"
+                  placeholder="Enter target URL (e.g. https://example.com)"
+                  className="w-full h-14 sm:h-16 bg-transparent border-none pl-12 sm:pl-16 pr-4 sm:pr-6 text-base sm:text-lg font-semibold focus:outline-none text-[var(--eu-text-main)] placeholder-slate-500"
                 />
               </div>
 
               <button 
                 type="submit"
                 disabled={loading}
-                className="btn-premium px-8 sm:px-10 h-14 sm:h-16 text-white rounded-[18px] sm:rounded-[20px] transition-all active:scale-[0.98] font-black uppercase tracking-widest text-[10px] sm:text-xs disabled:opacity-50 w-full md:w-auto overflow-hidden group"
+                className="btn-premium px-8 sm:px-10 h-14 sm:h-16 text-white rounded-xl sm:rounded-2xl transition-all active:scale-[0.98] font-bold tracking-wide text-sm disabled:opacity-50 w-full md:w-auto overflow-hidden group"
               >
                 <div className="flex items-center justify-center gap-3 relative z-10">
                   {loading ? (
-                    <Loader2 size={20} className="animate-spin sm:size-[24px]" />
+                    <Loader2 size={20} className="animate-spin" />
                   ) : (
                     <>
-                      <span>{showScheduling ? 'Confirm Schedule' : 'Initiate Protocol'}</span>
-                      <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform sm:size-[18px]" />
+                      <span>{showScheduling ? 'Confirm Schedule' : 'Start Audit'}</span>
+                      <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                     </>
                   )}
                 </div>
@@ -167,36 +169,55 @@ const ScanForm = ({ onScanStarted }) => {
             </div>
           </div>
 
-          <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
-            <button
-               type="button"
-               onClick={() => setShowScheduling(!showScheduling)}
-               className={`flex items-center gap-3 px-6 py-2.5 rounded-2xl border transition-all ${
-                 showScheduling 
-                  ? 'bg-eu-accent/10 border-eu-accent/30 text-eu-accent shadow-neon' 
-                  : 'bg-[var(--eu-bg-void)] border-[var(--eu-glass-border)] text-text-muted/60 opacity-60 hover:opacity-100'
-               }`}
-            >
-               <Calendar size={12} className={showScheduling ? 'animate-pulse' : ''} />
-               <span className="text-[9px] font-black uppercase tracking-widest">
-                 {showScheduling ? 'Cancel Scheduling' : 'Automate Lifecycle'}
-               </span>
-            </button>
-            
-            <div className="w-[1px] h-4 bg-white/5 hidden sm:block" />
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+            {/* Audit Scope Toggle */}
+            <div className="flex items-center gap-2 bg-slate-900/60 px-3.5 py-1.5 rounded-xl border border-slate-800">
+              <span className="text-[11px] font-semibold text-slate-400">Scope:</span>
+              <div className="flex gap-1 p-0.5 bg-slate-950 rounded-lg border border-slate-800/80">
+                <button
+                  type="button"
+                  onClick={() => setScope('site')}
+                  className={`px-3 py-1 rounded-md text-[11px] font-semibold transition-all flex items-center gap-1.5 ${
+                    scope === 'site'
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
+                  title="Crawls all internal pages via sitemaps, navigation links, and JavaScript router endpoints"
+                >
+                  <Globe size={11} />
+                  <span>Entire Website Crawl</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScope('single')}
+                  className={`px-3 py-1 rounded-md text-[11px] font-semibold transition-all flex items-center gap-1.5 ${
+                    scope === 'single'
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  }`}
+                  title="Audits only the single target URL entered"
+                >
+                  <Target size={11} />
+                  <span>Single URL</span>
+                </button>
+              </div>
+            </div>
 
-            <div className="flex items-center gap-3 bg-[var(--eu-bg-void)] px-4 py-2 rounded-2xl border border-[var(--eu-glass-border)]">
-              <span className="text-[9px] font-black uppercase tracking-widest text-text-muted/60">Chaos Intensity:</span>
-              <div className="flex gap-1.5 p-1 bg-[var(--eu-bg-void)]/20 rounded-xl">
+            <div className="w-[1px] h-4 bg-slate-800 hidden sm:block" />
+
+            {/* Scan Depth Intensity */}
+            <div className="flex items-center gap-2 bg-slate-900/60 px-3.5 py-1.5 rounded-xl border border-slate-800">
+              <span className="text-[11px] font-semibold text-slate-400">Depth:</span>
+              <div className="flex gap-1 p-0.5 bg-slate-950 rounded-lg border border-slate-800/80">
                 {['minimal', 'standard', 'maximum'].map((level) => (
                   <button
                     key={level}
                     type="button"
                     onClick={() => setChaosIntensity(level)}
-                    className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-semibold capitalize transition-all ${
                       chaosIntensity === level 
-                        ? 'bg-primary text-white shadow-neon scale-105' 
-                      : 'text-[var(--eu-text-main)] opacity-40 hover:opacity-100 hover:bg-[var(--eu-bg-void)]/10'
+                        ? 'bg-indigo-600 text-white shadow-sm' 
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
                     }`}
                   >
                     {level}
@@ -204,6 +225,24 @@ const ScanForm = ({ onScanStarted }) => {
                 ))}
               </div>
             </div>
+
+            <div className="w-[1px] h-4 bg-slate-800 hidden sm:block" />
+
+            {/* Schedule Toggle */}
+            <button
+               type="button"
+               onClick={() => setShowScheduling(!showScheduling)}
+               className={`flex items-center gap-2 px-4 py-1.5 rounded-xl border text-[11px] font-semibold tracking-wide transition-all ${
+                 showScheduling 
+                  ? 'bg-indigo-500/15 border-indigo-500/40 text-indigo-400' 
+                  : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+               }`}
+            >
+               <Calendar size={13} />
+               <span>
+                 {showScheduling ? 'Cancel Schedule' : 'Schedule Recurring'}
+               </span>
+            </button>
           </div>
 
           <AnimatePresence>

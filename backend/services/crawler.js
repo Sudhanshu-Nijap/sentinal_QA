@@ -55,8 +55,54 @@ const crawlWebsite = async (reportId, baseUrl, emitProgress, options = {}) => {
         return [baseUrl];
     }
 
+    // ─── Phase 0.5: Sitemap Auto-Discovery ─────────────────────────────
+    const fetchSitemapUrls = async (targetBaseUrl, targetDomain) => {
+        const discovered = [];
+        try {
+            const origin = new URL(targetBaseUrl).origin;
+            const candidates = [`${origin}/sitemap.xml`, `${origin}/sitemap_index.xml` ];
+            for (const smUrl of candidates) {
+                try {
+                    const res = await axios.get(smUrl, { 
+                        timeout: 4000, 
+                        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }, 
+                        validateStatus: s => s === 200 
+                    });
+                    if (res.data && typeof res.data === 'string') {
+                        const matches = res.data.match(/<loc>(.*?)<\/loc>/gi);
+                        if (matches) {
+                            matches.forEach(m => {
+                                const u = m.replace(/<\/?loc>/gi, '').trim();
+                                try {
+                                    if (new URL(u).hostname === targetDomain && !discovered.includes(u)) {
+                                        discovered.push(u);
+                                    }
+                                } catch (_) {}
+                            });
+                        }
+                    }
+                } catch (_) {}
+                if (discovered.length > 0) break;
+            }
+        } catch (_) {}
+        return discovered;
+    };
+
     let browser;
     try {
+        if (scope === 'site') {
+            progress(9, `Extracting sitemap index for ${domain}...`);
+            const sitemapUrls = await fetchSitemapUrls(baseUrl, domain);
+            if (sitemapUrls.length > 0) {
+                console.log(`[Crawler]: Discovered ${sitemapUrls.length} canonical URLs from sitemap.`);
+                sitemapUrls.slice(0, 40).forEach(smUrl => {
+                    if (!queue.some(q => q.url === smUrl)) {
+                        queue.push({ url: smUrl, depth: 1 });
+                    }
+                });
+            }
+        }
+
         const port = 9222 + Math.floor(Math.random() * 100);
         browser = await chromium.launch({
             headless: true,
@@ -105,13 +151,14 @@ const crawlWebsite = async (reportId, baseUrl, emitProgress, options = {}) => {
             visited.add(url);
 
             try {
-                // Tactical Navigation: Wait for 'commit' to bypass WAF hangs (e.g., Amity/Imperva)
-                await page.goto(url, { waitUntil: 'commit', timeout: 30000 });
+                // Tactical Navigation: Wait for 'commit' to bypass WAF hangs
+                await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
                 
-                // Essential wait for hydration and lazy-loaded content
-                // Scroll slightly to trigger 'on-scroll' lazy loading patterns
-                await page.evaluate(() => window.scrollBy(0, 500));
-                await page.waitForTimeout(8000).catch(() => {});
+                // Trigger dynamic scroll hydration for SPAs & lazy loaded routes
+                await page.evaluate(() => {
+                    window.scrollTo({ top: document.body.scrollHeight / 2, behavior: 'smooth' });
+                });
+                await page.waitForTimeout(2000).catch(() => {});
                 
                 internalPages.add(url);
                 progress(10, `Hydration Stabilized: Scanned ${new URL(url).pathname}`);
@@ -122,19 +169,59 @@ const crawlWebsite = async (reportId, baseUrl, emitProgress, options = {}) => {
                     structure.nodes.push({ id: url, label: pathName, url, depth });
                 }
 
-                // Gather links for centralized audit
-                const links = await page.evaluate(() =>
-                    Array.from(document.querySelectorAll('a[href]'))
-                        .map(a => a.href)
-                        .filter(h => h.startsWith('http') && !h.includes('#') && !h.includes('mailto:') && !h.includes('tel:'))
-                );
+                // Deep Link Extraction across a[href], data-href, router-link
+                const links = await page.evaluate(() => {
+                    const raw = Array.from(document.querySelectorAll('a[href], [data-href], [router-link]'))
+                        .map(el => el.getAttribute('href') || el.getAttribute('data-href') || el.getAttribute('router-link'))
+                        .filter(Boolean);
+                    
+                    return raw.map(attr => {
+                        try {
+                            const abs = new URL(attr, window.location.href);
+                            abs.hash = ''; // Strip fragments
+                            return abs.href;
+                        } catch {
+                            return null;
+                        }
+                    }).filter(h => h && h.startsWith('http') && !h.includes('mailto:') && !h.includes('tel:'));
+                });
                 
-                // --- NEW: Script Source Extraction ---
+                // --- INDUSTRY AST & ENDPOINT MINER: Extract hidden routes from JavaScript bundles ---
                 const scriptUrls = await page.evaluate(() => 
                     Array.from(document.querySelectorAll('script[src]'))
                         .map(s => s.src)
                         .filter(src => src.startsWith('http'))
                 );
+
+                // Mine same-origin JavaScript files for hidden API/Application endpoints
+                const sameOriginScripts = scriptUrls.filter(s => {
+                    try { return new URL(s).hostname === domain; } catch { return false; }
+                }).slice(0, 5);
+
+                for (const scriptUrl of sameOriginScripts) {
+                    try {
+                        const scriptRes = await axios.get(scriptUrl, {
+                            timeout: 4000,
+                            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+                            validateStatus: s => s === 200
+                        });
+                        if (typeof scriptRes.data === 'string') {
+                            const routeRegex = /(?:"|')(\/(?:[a-zA-Z0-9_\-\.]+\/)*[a-zA-Z0-9_\-\.]+)(?:"|')/g;
+                            let match;
+                            let minedCount = 0;
+                            while ((match = routeRegex.exec(scriptRes.data)) !== null && minedCount < 15) {
+                                const routePath = match[1];
+                                if (!/\.(png|jpg|jpeg|gif|css|svg|woff2?|ttf|ico|json)$/i.test(routePath) && routePath.length > 2) {
+                                    const minedUrl = `https://${domain}${routePath}`;
+                                    if (!visited.has(minedUrl) && !queue.some(q => q.url === minedUrl)) {
+                                        queue.push({ url: minedUrl, depth: depth + 1 });
+                                        minedCount++;
+                                    }
+                                }
+                            }
+                        }
+                    } catch (_) {}
+                }
 
                 links.forEach(link => {
                     if (!linkSourceMap.has(link)) {
@@ -151,7 +238,7 @@ const crawlWebsite = async (reportId, baseUrl, emitProgress, options = {}) => {
                     } catch (_) {}
                 });
             } catch (e) {
-                console.warn(`[Crawler]: Failed to discovery links on ${url}: ${e.message}`);
+                console.warn(`[Crawler]: Failed to discover links on ${url}: ${e.message}`);
             }
         }
 

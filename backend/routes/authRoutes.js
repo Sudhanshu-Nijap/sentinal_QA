@@ -104,17 +104,16 @@ router.get('/profile/:userId', async (req, res) => {
 });
 
 router.post('/update-webhooks', async (req, res) => {
-    const { userId, n8nWebhookUrl, slackWebhookUrl, discordWebhookUrl } = req.body;
+    const { userId, n8nWebhookUrl, slackWebhookUrl } = req.body;
     if (!userId) return res.status(400).json({ error: 'User ID is required' });
 
     try {
         const user = await User.findByIdAndUpdate(userId, { 
             n8nWebhookUrl,
-            slackWebhookUrl,
-            discordWebhookUrl
+            slackWebhookUrl
         }, { new: true });
         if (!user) return res.status(404).json({ error: 'User not found' });
-        res.json({ message: 'Webhooks updated', n8nWebhookUrl: user.n8nWebhookUrl, slackWebhookUrl: user.slackWebhookUrl, discordWebhookUrl: user.discordWebhookUrl });
+        res.json({ message: 'Webhooks updated', n8nWebhookUrl: user.n8nWebhookUrl, slackWebhookUrl: user.slackWebhookUrl });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

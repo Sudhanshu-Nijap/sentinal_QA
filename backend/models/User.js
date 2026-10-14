@@ -26,11 +26,6 @@ const userSchema = new mongoose.Schema({
         type: String,
         trim: true,
         default: ''
-    },
-    discordWebhookUrl: {
-        type: String,
-        trim: true,
-        default: ''
     }
 });
 

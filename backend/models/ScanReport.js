@@ -45,7 +45,9 @@ const scanReportSchema = new mongoose.Schema({
     screenshots: [mongoose.Schema.Types.Mixed],
     aiInsights: {
         classification: String,
+        qaVerdict: String,
         summary: String,
+        performancePlaybook: [String],
         issues: [{
             source: { type: String, enum: ['local', 'llm'] },
             title: String, // UI friendly name

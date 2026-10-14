@@ -5,19 +5,33 @@ const path = require('path');
 
 /**
  * generatePDF
- * Generates a detailed, professional PDF report using Playwright.
- * Embeds screenshots, full issue lists, chaos results, and AI insights.
+ * Generates a detailed, professional PDF report using Playwright with PDF caching & memory guards.
  */
 const generatePDF = async (reportId) => {
     const idString = reportId.toString();
+    const pdfPath = path.join(__dirname, `../reports/report-${idString}.pdf`);
+
+    // Return cached PDF if it already exists and report hasn't modified recently
+    if (fs.existsSync(pdfPath)) {
+        try {
+            const stat = fs.statSync(pdfPath);
+            // If PDF was generated within last 5 minutes, serve cached version
+            if (Date.now() - stat.mtimeMs < 5 * 60 * 1000) {
+                return `/reports/report-${idString}.pdf`;
+            }
+        } catch (_) {}
+    }
+
     const report = await ScanReport.findById(idString);
     if (!report) return null;
 
-    // Helper: convert a screenshot path to a base64 data URI so it works in the PDF
+    // Helper: convert screenshot to base64 with 500KB safety size cap
     const toBase64 = (relPath) => {
         try {
             const absPath = path.join(__dirname, '..', relPath);
             if (fs.existsSync(absPath)) {
+                const stat = fs.statSync(absPath);
+                if (stat.size > 1.5 * 1024 * 1024) return null; // Skip images > 1.5MB to save PDF memory
                 const data = fs.readFileSync(absPath);
                 return `data:image/png;base64,${data.toString('base64')}`;
             }
@@ -33,8 +47,6 @@ const generatePDF = async (reportId) => {
         (report.formIssues?.length || 0) +
         (report.accessibilityIssues?.length || 0) +
         (report.networkLogs?.filter(n => n.status >= 400)?.length || 0);
-
-    const chaosImpacts = report.chaosSubmissions?.filter(s => s.outcome === 'Impact Detected') || [];
 
     const severityColor = (sev) => {
         if (!sev) return '#64748b';
@@ -69,8 +81,8 @@ const generatePDF = async (reportId) => {
         </div>`;
     }).join('');
 
-    // ── Build Site-Wide Visual Gallery ────────────────────────────────────────
-    const visualGalleryHtml = (report.screenshots || []).map((s) => {
+    // ── Build Visual Gallery (Limit to top 6 screenshots) ──────────────────────
+    const visualGalleryHtml = (report.screenshots || []).slice(0, 6).map((s) => {
         const imgSrc = toBase64(s.path);
         return `
         <div class="gallery-card">
@@ -86,7 +98,7 @@ const generatePDF = async (reportId) => {
     const issueTable = (items, fields) => {
         if (!items || items.length === 0) return `<p class="empty-note">None detected.</p>`;
         const headers = fields.map(f => `<th>${f.label}</th>`).join('');
-        const rows = items.slice(0, 100).map(item =>
+        const rows = items.slice(0, 50).map(item =>
             `<tr>${fields.map(f => `<td>${escHtml(String(item[f.key] || '—'))}</td>`).join('')}</tr>`
         ).join('');
         return `<table class="data-table"><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>`;
@@ -114,8 +126,6 @@ const generatePDF = async (reportId) => {
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Inter', sans-serif; background: #0f172a; color: #e2e8f0; font-size: 11px; }
-  
-  /* Cover Page */
   .cover { width: 100%; min-height: 100vh; background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f2240 100%); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 60px; text-align: center; page-break-after: always; }
   .cover-logo { font-size: 64px; font-weight: 900; letter-spacing: -3px; background: linear-gradient(135deg, #60a5fa, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 8px; }
   .cover-sub { font-size: 14px; font-weight: 700; letter-spacing: 8px; text-transform: uppercase; color: #64748b; margin-bottom: 60px; }
@@ -126,25 +136,17 @@ const generatePDF = async (reportId) => {
   .stat-num { font-size: 48px; font-weight: 900; color: #f8fafc; }
   .stat-label { font-size: 10px; letter-spacing: 4px; text-transform: uppercase; color: #64748b; }
   .status-pill { display: inline-block; margin-top: 24px; padding: 8px 24px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; background: #22c55e20; color: #22c55e; border: 1px solid #22c55e40; }
-
-  /* Sections */
   .section { padding: 48px 60px; page-break-inside: avoid; }
   .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; border-bottom: 1px solid #1e293b; padding-bottom: 16px; }
   .section-tag { font-size: 9px; font-weight: 700; letter-spacing: 4px; text-transform: uppercase; color: #60a5fa; }
   .section-title { font-size: 24px; font-weight: 800; color: #f8fafc; }
-
-  /* Summary box */
   .summary-box { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 32px; }
   .summary-text { font-size: 14px; line-height: 1.8; color: #cbd5e1; }
-
-  /* Lighthouse gauges */
   .gauges { display: flex; gap: 32px; justify-content: center; margin: 32px 0; }
   .gauge { text-align: center; }
   .gauge-circle { width: 88px; height: 88px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; }
   .gauge-val { font-size: 22px; font-weight: 900; color: #f8fafc; }
   .gauge-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #64748b; }
-
-  /* AI Issues */
   .ai-issue-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px 24px; margin-bottom: 16px; }
   .ai-issue-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
   .issue-num { width: 28px; height: 28px; background: #60a5fa20; border: 1px solid #60a5fa40; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #60a5fa; flex-shrink: 0; }
@@ -154,28 +156,21 @@ const generatePDF = async (reportId) => {
   .detail-row { margin-bottom: 8px; color: #94a3b8; line-height: 1.6; }
   .fix-dev { color: #6ee7b7; }
   .code-block { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 16px; margin-top: 12px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #7dd3fc; white-space: pre-wrap; word-break: break-all; }
-
-  /* Gallery Cards */
   .gallery-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px; margin-bottom: 24px; page-break-inside: avoid; }
   .gallery-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
   .gallery-page { font-size: 12px; font-weight: 700; color: #60a5fa; word-break: break-all; }
   .gallery-img { width: 100%; border-radius: 8px; border: 1px solid #334155; margin-top: 12px; }
-
-  /* Data table */
   .data-table { width: 100%; border-collapse: collapse; font-size: 10px; }
   .data-table th { background: #1e293b; color: #64748b; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; text-align: left; padding: 10px 12px; border-bottom: 1px solid #334155; }
   .data-table td { padding: 8px 12px; border-bottom: 1px solid #1e293b; color: #94a3b8; word-break: break-word; }
   .data-table tr:hover td { background: #1e293b; }
   .empty-note { color: #64748b; font-style: italic; padding: 16px 0; }
-
-  /* Footer */
   .footer { text-align: center; padding: 32px; border-top: 1px solid #1e293b; color: #475569; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; }
   .page-break { page-break-before: always; }
 </style>
 </head>
 <body>
 
-<!-- ═══════ COVER PAGE ═══════ -->
 <div class="cover">
   <div class="cover-logo">SENTINEL</div>
   <div class="cover-sub">Tactical AI Audit Report</div>
@@ -189,7 +184,6 @@ const generatePDF = async (reportId) => {
   <div class="status-pill">${report.status.toUpperCase()}</div>
 </div>
 
-<!-- ═══════ EXECUTIVE SUMMARY ═══════ -->
 <div class="section">
   <div class="section-header"><span class="section-tag">01</span><span class="section-title">Executive Summary</span></div>
   <div class="summary-box">
@@ -204,14 +198,12 @@ const generatePDF = async (reportId) => {
   </div>
 </div>
 
-<!-- ═══════ AI ANALYSIS & REMEDIATION ═══════ -->
 ${report.aiInsights?.issues?.length > 0 ? `
 <div class="section page-break">
   <div class="section-header"><span class="section-tag">02</span><span class="section-title">Critical Insight & Remediation</span></div>
   ${aiIssuesHtml}
 </div>` : ''}
 
-<!-- ═══════ UI/UX & LAYOUT LOG ═══════ -->
 <div class="section page-break">
   <div class="section-header"><span class="section-tag">03</span><span class="section-title">UI/UX & Layout Diagnostics (${report.uiIssues?.length || 0})</span></div>
   ${issueTable(report.uiIssues, [
@@ -222,7 +214,6 @@ ${report.aiInsights?.issues?.length > 0 ? `
   ])}
 </div>
 
-<!-- ═══════ FORM INTEGRITY LOG ═══════ -->
 <div class="section page-break">
   <div class="section-header"><span class="section-tag">04</span><span class="section-title">Form Interaction & Integrity (${report.formIssues?.length || 0})</span></div>
   ${issueTable(report.formIssues, [
@@ -233,7 +224,6 @@ ${report.aiInsights?.issues?.length > 0 ? `
   ])}
 </div>
 
-<!-- ═══════ CONSOLE & SCRIPT ALERTS ═══════ -->
 <div class="section page-break">
   <div class="section-header"><span class="section-tag">05</span><span class="section-title">Console & Script Alerts (${report.consoleErrors?.length || 0})</span></div>
   ${issueTable(report.consoleErrors, [
@@ -244,7 +234,6 @@ ${report.aiInsights?.issues?.length > 0 ? `
   ])}
 </div>
 
-<!-- ═══════ ACCESSIBILITY LOG ═══════ -->
 <div class="section page-break">
   <div class="section-header"><span class="section-tag">06</span><span class="section-title">Global Accessibility Compliance (${report.accessibilityIssues?.length || 0})</span></div>
   ${issueTable(report.accessibilityIssues, [
@@ -255,7 +244,6 @@ ${report.aiInsights?.issues?.length > 0 ? `
   ])}
 </div>
 
-<!-- ═══════ NETWORK & ASSET TRACE ═══════ -->
 <div class="section page-break">
   <div class="section-header"><span class="section-tag">07</span><span class="section-title">Network & Asset Failures (${report.networkLogs?.filter(n => n.status >= 400)?.length || 0})</span></div>
   ${issueTable(report.networkLogs?.filter(n => n.status >= 400), [
@@ -266,7 +254,6 @@ ${report.aiInsights?.issues?.length > 0 ? `
   ])}
 </div>
 
-<!-- ═══════ BROKEN LINK TRACE ═══════ -->
 <div class="section page-break">
   <div class="section-header"><span class="section-tag">08</span><span class="section-title">Broken Navigation Trace (${report.brokenLinks?.length || 0})</span></div>
   ${issueTable(report.brokenLinks, [
@@ -276,13 +263,11 @@ ${report.aiInsights?.issues?.length > 0 ? `
   ])}
 </div>
 
-<!-- ═══════ VISUAL CONTEXT GALLERY ═══════ -->
 <div class="section page-break">
   <div class="section-header"><span class="section-tag">09</span><span class="section-title">Visual Context Gallery (Appendix)</span></div>
   ${visualGalleryHtml || '<p class="empty-note">No visual telemetry captured.</p>'}
 </div>
 
-<!-- ═══════ FOOTER ═══════ -->
 <div class="footer">Sentinel AI QA Platform &nbsp;|&nbsp; High-Fidelity Tactical Report &nbsp;|&nbsp; ${new Date().toLocaleDateString()}</div>
 </body>
 </html>`;
@@ -292,12 +277,11 @@ ${report.aiInsights?.issues?.length > 0 ? `
     try {
         browser = await chromium.launch({ 
             headless: true, 
-            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'] 
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'] 
         });
         const page = await browser.newPage();
-        await page.setContent(html, { waitUntil: 'networkidle' });
+        await page.setContent(html, { waitUntil: 'domcontentloaded' });
 
-        const pdfPath = path.join(__dirname, `../reports/report-${idString}.pdf`);
         const pdfDir = path.dirname(pdfPath);
         if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
 
@@ -314,7 +298,37 @@ ${report.aiInsights?.issues?.length > 0 ? `
     }
 };
 
-// Minimal HTML escape to prevent XSS inside the report
+/**
+ * generateCSV - Exports report findings as a clean CSV table string
+ */
+const generateCSV = async (reportId) => {
+    const report = await ScanReport.findById(reportId);
+    if (!report) return null;
+
+    const rows = [
+        ['Category', 'Page', 'Title/Message/Link', 'Severity/Status', 'Details']
+    ];
+
+    (report.brokenLinks || []).forEach(l => {
+        rows.push(['Broken Link', l.page || '', l.link || '', l.status || '', '']);
+    });
+
+    (report.consoleErrors || []).forEach(c => {
+        rows.push(['Console Error', c.page || '', c.message || '', c.type || '', c.location || '']);
+    });
+
+    (report.accessibilityIssues || []).forEach(a => {
+        rows.push(['Accessibility', a.page || '', a.issue || '', a.severity || '', a.recommendation || '']);
+    });
+
+    (report.uiIssues || []).forEach(u => {
+        rows.push(['UI Issue', u.page || '', u.issue || '', u.severity || '', u.location || '']);
+    });
+
+    return rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+};
+
+// Minimal HTML escape to prevent XSS inside report
 function escHtml(str) {
     if (!str) return '';
     return String(str)
@@ -324,4 +338,5 @@ function escHtml(str) {
         .replace(/"/g, '&quot;');
 }
 
-module.exports = { generatePDF };
+module.exports = { generatePDF, generateCSV };
+

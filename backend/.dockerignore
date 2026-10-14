@@ -2,7 +2,6 @@ node_modules
 npm-debug.log
 reports
 screenshots
-data
 .env
 .git
 .gitignore

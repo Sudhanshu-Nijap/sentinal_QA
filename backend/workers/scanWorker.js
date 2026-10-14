@@ -16,14 +16,13 @@ const qaAgent = require('../services/qaAgent');
 const scanEngine = require('../services/scanEngine');
 const comparisonService = require('../services/comparisonService');
 const linkGuardian = require('../services/linkGuardian');
-const axios = require('axios');
 
 // 3. Connection Substrate Logic (Hardened)
 const connectWithRetry = async (attempts = 0) => {
     const MAX_ATTEMPTS = 5;
     try {
         await mongoose.connect(process.env.MONGODB_URI, {
-            serverSelectionTimeoutMS: 15000, // Fail fast (15s) if DNS/Host is unreachable
+            serverSelectionTimeoutMS: 15000,
         });
         console.log('[Worker]: Connected to Tactical Database');
     } catch (err) {
@@ -37,11 +36,10 @@ const connectWithRetry = async (attempts = 0) => {
     }
 };
 
-// --- 4. Tactical Event Substrate ---
+// 4. Tactical Event Substrate
 let mainChatMessageDispatcher = null;
 const earlyInsightQueue = [];
 
-// Fallback: In-built message persistence if service is not yet ready
 const persistMessageLocally = async (chatId, type, content, scanReportId, reportSummary) => {
     if (!chatId) return null;
     try {
@@ -59,7 +57,6 @@ const safeMessageUplink = async (chatId, type, content, scanReportId, reportSumm
         return await mainChatMessageDispatcher(chatId, type, content, scanReportId, reportSummary);
     }
     
-    // Dispatcher not ready (e.g. still requiring modules) -> Persist and queue for sync
     console.log('[Worker]: Dispatcher not ready. Persisting early insight locally...');
     const msg = await persistMessageLocally(chatId, type, content, scanReportId, reportSummary);
     if (msg) earlyInsightQueue.push(msg);
@@ -69,7 +66,6 @@ const safeMessageUplink = async (chatId, type, content, scanReportId, reportSumm
 const calculateReportHealth = (report, lhMetrics = null) => {
     if (!report) return 0;
     
-    // If Lighthouse metrics are available, they become the primary driver (80% weight)
     if (lhMetrics && (lhMetrics.performance || lhMetrics.accessibility || lhMetrics.seo || lhMetrics.bestPractices)) {
         const lhAvg = (
             (lhMetrics.performance || 0) + 
@@ -78,7 +74,6 @@ const calculateReportHealth = (report, lhMetrics = null) => {
             (lhMetrics.bestPractices || 0)
         ) / 4;
         
-        // Apply small penalty for tactical failures (Broken links, console errors)
         const tacticalPenalty = (
             (report.brokenLinks?.length || 0) * 2 + 
             (report.consoleErrors?.length || 0) * 0.5 +
@@ -90,7 +85,6 @@ const calculateReportHealth = (report, lhMetrics = null) => {
         return score;
     }
 
-    // Fallback Heuristic if Lighthouse is disabled
     const weights = { network: 0.1, links: 10, console: 5, ui: 10, accessibility: 10 };
     const counts = {
         network: report.networkLogs?.length || 0,
@@ -112,26 +106,19 @@ const calculateReportHealth = (report, lhMetrics = null) => {
 
 // 5. Orchestration Pipeline
 async function runMasterOrchestrator(data) {
-    const { reportId, baseUrl, tests, scope, chatId } = data;
+    const { reportId, baseUrl, tests, scope, chatId, prevReportId } = data;
     console.log(`[MasterWorker]: Starting Tactical Pulse for Report: ${reportId} (Target: ${baseUrl})`);
     
-    // Initialize primary dispatcher
     mainChatMessageDispatcher = persistMessageLocally;
-    console.log('[MasterWorker]: Neural Insight Substrate Initialized.');
 
     try {
-        console.log(`[MasterWorker]: Orchestrating tactical scan for ${baseUrl}`);
         let lighthouseMetrics = null;
 
         const emitProgress = (percent, stage) => {
             if (parentPort) parentPort.postMessage({ type: 'progress', percent, stage });
         };
 
-        // --- FLASH-MODE ORCHESTRATION ---
         emitProgress(5, 'Engaging Integrated Audit Core...');
-        
-        // 1. Integrated Discovery & Audit (Converged Engine)
-        // The engine now handles technical, visual, and compliance (Lighthouse) audits in a single resilient pass.
 
         if (scope === 'single') {
             console.log('[MasterWorker]: Executing Unified Session Audit (Standard Convergence)...');
@@ -144,22 +131,18 @@ async function runMasterOrchestrator(data) {
                 await scanEngine.persistScanData(reportId, result);
             }
         } else {
-            // Site-wide crawl handles its own persistence internally
             await scanEngine.runTargetedCrawlScan(reportId, baseUrl, tests, (p, s) => {
                 emitProgress(5 + Math.round(p * 0.80), s);
             }, scope);
             
-            // Re-fetch to get consolidated lighthouse scores from site-wide crawl if captured
             const consolidatedReport = await ScanReport.findById(reportId);
-            lighthouseMetrics = consolidatedReport.lighthouseScores;
+            lighthouseMetrics = consolidatedReport?.lighthouseScores;
         }
 
-        // 2. Parallel Secondary UX Pulse (Insights)
+        // Parallel Secondary Insights
         await Promise.all([
-
-            // 3. Early AI Insight Dispatch
             (async () => {
-                if (workerData.prevReportId) return;
+                if (prevReportId) return;
                 try {
                     const insightSummary = "Strategic Analysis: Sentinel AI is engaging core diagnostics for " + baseUrl + "...";
                     const earlyMsg = await safeMessageUplink(chatId, 'ai', insightSummary, reportId, null);
@@ -173,29 +156,21 @@ async function runMasterOrchestrator(data) {
         ]);
 
         emitProgress(90, 'All tactical pulses converged. Finalizing Neural Report...');
-
-        // --- STAGE 3: AI Synthesis & Evolution ---
         emitProgress(92, 'Syncing Final AI Analysis...');
-        const { prevReportId } = data;
 
-        // CRITICAL SYNC: Re-fetch currentReport to capture all async security telemetry
         const currentReport = await ScanReport.findById(reportId);
         const previousReport = prevReportId ? await ScanReport.findById(prevReportId) : null;
 
         if (!currentReport) throw new Error('Neural focus lost: Report not found during synthesis.');
 
-        // 1. Calculate health score using Lighthouse as the primary driver
         const healthScore = calculateReportHealth(currentReport, lighthouseMetrics);
         currentReport.healthScore = healthScore; 
 
-        // 2. Run AI Agent and capture insights (avoiding direct DB updates in agent)
         const aiInsights = await qaAgent.runAgent(reportId, prevReportId, currentReport, previousReport);
 
-        // 3. Run Comparison Service
         emitProgress(95, 'Calculating Performance Delta...');
         const comparison = await comparisonService.calculateDelta(currentReport, previousReport);
 
-        // Finalize Report - Atomic update including all gathered intelligence
         console.log(`[MasterWorker]: Finalizing Atomic Update for ${reportId}...`);
         const finalSet = {
             status: 'completed',
@@ -204,7 +179,6 @@ async function runMasterOrchestrator(data) {
             aiInsights: aiInsights
         };
         
-        // Ensure lighthouse scores are included in the final write if they were captured
         if (lighthouseMetrics) {
             finalSet.lighthouseScores = lighthouseMetrics;
         }
@@ -213,7 +187,6 @@ async function runMasterOrchestrator(data) {
             $set: finalSet
         }, { returnDocument: 'after' });
 
-        // --- STAGE 5: Post to Chat Thread ---
         if (chatId) {
             const isPreviousScan = !!comparison?.previousReportId;
             const msgType = isPreviousScan ? 'rescan' : 'report';
@@ -237,29 +210,28 @@ async function runMasterOrchestrator(data) {
                 } : null
             };
             const chatMsg = await safeMessageUplink(chatId, msgType, baseUrl, reportId, reportSummary);
-            if (chatMsg) {
-                // Fix: Convert Mongoose document to plain object for thread cloning
+            if (chatMsg && parentPort) {
                 parentPort.postMessage({ type: 'new-message', message: chatMsg.toObject() });
             }
         }
         
         console.log(`[MasterWorker]: Scan Cycle Optimized. Report ${reportId} is fully materialized.`);
         emitProgress(100, 'Strategic Evolution Complete.');
-        parentPort.postMessage({ type: 'completed', reportId: reportId });
-        return;
+        if (parentPort) parentPort.postMessage({ type: 'completed', reportId: reportId });
 
     } catch (error) {
         console.error('[MasterWorker Fatal]:', error);
-        await ScanReport.findByIdAndUpdate(reportId, { status: 'failed', customName: error.message });
-        parentPort.postMessage({ type: 'failed', error: error.message });
-        return;
+        await ScanReport.findByIdAndUpdate(reportId, { status: 'failed', customName: error.message }).catch(() => {});
+        if (parentPort) parentPort.postMessage({ type: 'failed', error: error.message });
+    } finally {
+        await mongoose.disconnect().catch(() => {});
     }
 }
 
-// ── Deadlock Watchdog (Adaptive Cutoff) ──────────────────────────────────────
+// 6. Deadlock Watchdog (Adaptive Cutoff)
 const SCOPE_TIMEOUTS = {
     'single': 300000,   // 5 minutes
-    'site': 1200000     // 20 minutes (for multi-page scans)
+    'site': 1200000     // 20 minutes
 };
 
 const timeoutMs = SCOPE_TIMEOUTS[workerData.scope] || 300000;
@@ -269,12 +241,27 @@ const watchdog = setTimeout(async () => {
     await ScanReport.findByIdAndUpdate(workerData.reportId, { 
         status: 'failed', 
         customName: `Scan timed out after ${Math.round(timeoutMs/60000)}m of inactivity.` 
-    });
-    parentPort.postMessage({ type: 'failed', error: 'Neural substrate timeout' });
+    }).catch(() => {});
+    if (parentPort) parentPort.postMessage({ type: 'failed', error: 'Neural substrate timeout' });
     process.exit(1);
 }, timeoutMs); 
+
+// Global Exception Guards
+process.on('uncaughtException', (err) => {
+    console.error('[MasterWorker Uncaught Exception]:', err.message);
+    clearTimeout(watchdog);
+    if (parentPort) parentPort.postMessage({ type: 'failed', error: err.message });
+});
+
+process.on('unhandledRejection', (reason) => {
+    console.error('[MasterWorker Unhandled Rejection]:', reason);
+});
 
 // Start immediately with connection synchronization
 connectWithRetry().then(() => {
     runMasterOrchestrator(workerData).then(() => clearTimeout(watchdog));
+}).catch(err => {
+    clearTimeout(watchdog);
+    if (parentPort) parentPort.postMessage({ type: 'failed', error: err.message });
 });
+

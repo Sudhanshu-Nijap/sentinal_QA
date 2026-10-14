@@ -10,7 +10,6 @@ const qaScanner = require('../services/qaScanner');
 const qaAgent = require('../services/qaAgent');
 const reportExporter = require('../services/reportExporter');
 const scanEngine = require('../services/scanEngine');
-const discordService = require('../services/discordService');
 const axios = require('axios');
 const { analyzeURLSecurity } = require('../services/urlSecurityAnalyzer');
 
@@ -579,11 +578,6 @@ async function runFullScan(reportId, baseUrl, chaosIntensity, singlePageOnly = f
                         });
                     }
 
-                    // ── DISCORD BROADCAST (Scheduled) ────────────────────────
-                    console.log(`[Main]: Initiating automated Discord dispatch for Job: ${job._id}`);
-                    discordService.dispatchReport(reportId).catch(e => {
-                        console.error(`[Main Discord Failure]: ${e.message}`);
-                    });
                 }
             }
 
@@ -634,66 +628,6 @@ router.post('/learning/ask', async (req, res) => {
     } catch (e) {
         console.error('[LearningHub Error]:', e.message);
         res.status(500).json({ error: 'Neural substrate consult failed.' });
-    }
-});
-
-// ── NEURAL IDE INTEGRATION (TACTICAL MERGE) ───────────────────────────────────
-const fileScanner = require('../services/fileScanner');
-const scanExecutor = require('../services/scanExecutor');
-const patchApplier = require('../services/patchApplier');
-
-router.post('/debug/run', async (req, res) => {
-    const { folderPath } = req.body;
-    if (!folderPath) return res.status(400).json({ error: 'Substrate path required.' });
-
-    try {
-        const filesToScan = await fileScanner.scanDirectory(folderPath);
-        if (filesToScan.length === 0) {
-            return res.json({ status: 'error', error: 'No source files detected.', files: [] });
-        }
-        const auditPool = filesToScan.slice(0, 15);
-        const results = [];
-        for (const file of auditPool) {
-            try {
-                const auditResult = await scanExecutor.processFile(file);
-                results.push({ ...auditResult, path: file.path });
-            } catch (err) {
-                results.push({ file: file.name, status: 'error', message: err.message, path: file.path });
-            }
-        }
-        res.json({ status: 'success', files: results });
-    } catch (err) {
-        res.status(500).json({ error: 'Neural Scan Fault: ' + err.message });
-    }
-});
-
-router.post('/debug/patch', async (req, res) => {
-    const { filePath, patch } = req.body;
-    try {
-        const result = await patchApplier.applyPatch(filePath, patch);
-        res.json({ status: 'deployed', ...result });
-    } catch (err) {
-        res.status(500).json({ error: 'Deployment Fault: ' + err.message });
-    }
-});
-
-router.post('/debug/deploy-all', async (req, res) => {
-    const { filePath, patches } = req.body;
-    try {
-        const result = await patchApplier.deployAllPatches(filePath, patches);
-        res.json({ status: 'deployed_batch', ...result });
-    } catch (err) {
-        res.status(500).json({ error: 'Batch Deployment Fault: ' + err.message });
-    }
-});
-
-router.post('/debug/upload', async (req, res) => {
-    const { fileName, content } = req.body;
-    try {
-        const result = await scanExecutor.processFile({ name: fileName, path: 'memory://' + fileName, isMemory: true, content });
-        res.json({ status: 'success', files: [result] });
-    } catch (err) {
-        res.status(500).json({ error: 'Neural Upload Fault: ' + err.message });
     }
 });
 

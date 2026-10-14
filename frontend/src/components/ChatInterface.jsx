@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Send, Bot, User, Shield, Zap, Sparkles, Activity, Globe,
-  RefreshCw, ChevronDown, Check, Loader2, ChevronUp, Lock, Plus,
-  Calendar, Cpu
+  Send, Bot, User, Shield, Activity,
+  RefreshCw, ChevronDown, Check, Loader2, ChevronUp, Lock
 } from 'lucide-react';
 import axios from 'axios';
 import io from 'socket.io-client';
@@ -236,7 +235,9 @@ const ChatInterface = ({
   }, [pendingMessage, activeChatId, pendingReportId]);
 
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  useEffect(scrollToBottom, [messages, isTyping]);
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isTyping]);
 
   // Track in-progress scan via Socket
   useEffect(() => {
@@ -573,49 +574,7 @@ const ChatInterface = ({
         )}
       </AnimatePresence>
 
-      {/* ── Sticky Report Banner ── */}
-      <AnimatePresence>
-        {activeView === 'qa' && latestReport && (
-          <motion.div 
-            initial={{ opacity: 0, y: -10 }} 
-            animate={{ opacity: 1, y: 0 }}
-            className="sticky top-0 z-20 px-4 py-2 border-b border-[var(--eu-glass-border)] bg-[var(--eu-bg-void)]/80 backdrop-blur-md flex items-center justify-between gap-4"
-          >
-            <div className="flex items-center gap-3">
-              <div className="flex flex-col items-center">
-                <div className="size-8 rounded-full border-2 border-eu-accent flex items-center justify-center">
-                  <span className="text-[9px] font-black text-eu-accent">{latestReport.healthScore || '--'}</span>
-                </div>
-                <span className="text-[6px] font-black uppercase text-slate-500 mt-0.5">Health</span>
-              </div>
-              
-              <div className="h-6 w-px bg-white/5 mx-1" />
-              
-              <div className="flex items-center gap-3">
-                {[
-                  { label: 'Broken', val: latestReport.brokenLinks?.length || 0, color: 'text-red-400' },
-                  { label: 'Console', val: latestReport.consoleErrors?.length || 0, color: 'text-yellow-400' },
-                  { label: 'A11y', val: latestReport.accessibilityIssues?.length || 0, color: 'text-blue-400' },
-                  { label: 'UI/UX', val: (latestReport.uiIssues?.length || 0) + (latestReport.responsiveIssues?.length || 0), color: 'text-eu-accent' }
-                ].map(stat => (
-                  <div key={stat.label} className="flex flex-col">
-                    <span className={`text-[10px] font-black font-mono ${stat.val > 0 ? stat.color : 'text-slate-600'}`}>{stat.val}</span>
-                    <span className="text-[6px] font-black uppercase tracking-tighter text-slate-500">{stat.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
 
-            <button 
-              onClick={() => onViewFullReport(latestReport._id)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[8px] font-black uppercase tracking-widest text-white transition-all shadow-lg"
-            >
-              <Zap size={9} className="text-eu-accent" />
-              View Detail
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* ── Messages / Dashboard Views ── */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1 custom-scrollbar bg-[var(--eu-bg-void)]">

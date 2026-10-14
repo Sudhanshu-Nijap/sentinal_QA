@@ -84,6 +84,29 @@ class LinkGuardian {
                 threatTypes.add("Credential Harvesting");
             }
 
+            // 7. Punycode / Homoglyph Attack Check (IDN Squatting)
+            if (hostname.startsWith('xn--') || hostname.includes('.xn--')) {
+                riskScore += 50;
+                reasons.push("Uses Punycode encoding (potential IDN homoglyph spoofing attack).");
+                threatTypes.add("IDN Homoglyph Spoofing");
+            }
+
+            // 8. Dangerous Executable & Malware Payload Extensions
+            const dangerousExtensions = ['.exe', '.scr', '.apk', '.bat', '.vbs', '.sh', '.dmg', '.jar', '.ps1'];
+            if (dangerousExtensions.some(ext => parsed.pathname.toLowerCase().endsWith(ext))) {
+                riskScore += 60;
+                reasons.push("Target URL points directly to executable binary payload.");
+                threatTypes.add("Drive-by Malware Delivery");
+            }
+
+            // 9. Open Redirect Parameter Exploitation
+            const openRedirectParams = ['redirect=', 'url=', 'next=', 'dest=', 'destination=', 'out='];
+            if (openRedirectParams.some(param => fullUrl.includes(param))) {
+                riskScore += 25;
+                reasons.push("Contains open-redirect query parameter.");
+                threatTypes.add("Open Redirect Vulnerability");
+            }
+
             const isMalicious = riskScore >= 50;
 
             return {

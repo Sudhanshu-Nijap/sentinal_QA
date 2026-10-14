@@ -54,29 +54,40 @@ Sentinel QA is an AI-powered QA and security auditing platform designed to scan 
 ---
 
 ## 📁 Core Files
-*   **Backend Entry**: [backend/server.js](file:///c:/Users/sudha/OneDrive/Desktop/sentinal/sentinal_QA/backend/server.js)
-*   **Frontend Entry**: [frontend/src/main.jsx](file:///c:/Users/sudha/OneDrive/Desktop/sentinal/sentinal_QA/frontend/src/main.jsx)
-*   **Chat Agent**: [backend/services/chatAgent.js](file:///c:/Users/sudha/OneDrive/Desktop/sentinal/sentinal_QA/backend/services/chatAgent.js)
-*   **Scan Engine**: [backend/services/scanEngine.js](file:///c:/Users/sudha/OneDrive/Desktop/sentinal/sentinal_QA/backend/services/scanEngine.js)
+*   **Backend Entry**: [backend/server.js](file:///c:/Users/sudha/OneDrive/Desktop/Sudhu/sentinal/sentinal_QA/backend/server.js)
+*   **Frontend Entry**: [frontend/src/main.jsx](file:///c:/Users/sudha/OneDrive/Desktop/Sudhu/sentinal/sentinal_QA/frontend/src/main.jsx)
+*   **Chat Agent**: [backend/services/chatAgent.js](file:///c:/Users/sudha/OneDrive/Desktop/Sudhu/sentinal/sentinal_QA/backend/services/chatAgent.js)
+*   **Scan Engine**: [backend/services/scanEngine.js](file:///c:/Users/sudha/OneDrive/Desktop/Sudhu/sentinal/sentinal_QA/backend/services/scanEngine.js)
+*   **Secret Sniffer**: [backend/services/secretSniffer.js](file:///c:/Users/sudha/OneDrive/Desktop/Sudhu/sentinal/sentinal_QA/backend/services/secretSniffer.js)
+*   **Interaction Scanner**: [backend/services/interactionScanner.js](file:///c:/Users/sudha/OneDrive/Desktop/Sudhu/sentinal/sentinal_QA/backend/services/interactionScanner.js)
 
 ---
 
 ## 📂 File Structure
 ```text
 sentinal_QA/
-├── backend/                  # Express HTTP server & worker registry
-│   ├── data/                 # JSON knowledge-base datasets
-│   ├── models/               # MongoDB models (ScanReport, User, Job, Chat, Message)
-│   ├── routes/               # API controllers
-│   ├── services/             # Audits, AI code patchers, URL classification services
-│   └── workers/              # Isolated worker threads (scanWorker.js)
-└── frontend/                 # React 19 web app client
+├── backend/                  # Node.js & Express REST API & worker cluster
+│   ├── data/                 # Knowledge base datasets & distilled pattern fixes
+│   ├── models/               # Mongoose schemas (ScanReport, User, Job, Chat, Message)
+│   ├── routes/               # API controllers (scan, auth, chat, job)
+│   ├── scripts/              # Database maintenance & migration scripts
+│   ├── services/             # Core audit engines (scanEngine, secretSniffer, interactionScanner, crawler, qaAgent)
+│   ├── workers/              # Isolated worker threads (scanWorker, lighthouseWorker, playwrightWorker)
+│   ├── reports/              # Generated diagnostic PDF reports (runtime output)
+│   ├── screenshots/          # Captured full-page visual audits (runtime output)
+│   └── server.js             # HTTP server entry point & WebSocket registry
+└── frontend/                 # React 19 + Tailwind CSS + Vite web client
+    ├── public/               # Static icons & assets
     └── src/
-        ├── components/       # UI dashboard components (ChatInterface, IDEView, BentoDashboard)
-        └── main.jsx          # Frontend client bootstrap point
+        ├── assets/           # Global styles and assets
+        ├── components/       # UI dashboard components (ReportDetail, ReportDashboard, BentoDashboard, ScanForm, ChatInterface)
+        ├── config/           # API endpoints and client configuration (api.js)
+        ├── data/             # Frontend reference data (learningHubData.json)
+        ├── App.jsx           # Application shell & view router
+        └── main.jsx          # React bootstrap mount point
 ```
 
 ---
 
 ## 📜 License
-Licensed under the [ISC License](file:///c:/Users/sudha/OneDrive/Desktop/sentinal/sentinal_QA/backend/package.json#L13).
+Licensed under the [ISC License](file:///c:/Users/sudha/OneDrive/Desktop/Sudhu/sentinal/sentinal_QA/backend/package.json#L13).
