@@ -88,18 +88,19 @@ const ScanSummaryCard = ({ message, onViewReport, isRescan }) => {
           </div>
         </div>
 
-        {/* Middle: Issue Counts */}
-        <div className="px-4 py-3 grid grid-cols-5 gap-1 border-b border-white/5">
+        {/* Middle: Issue Counts across All Audit Sensors */}
+        <div className="px-3 py-3 grid grid-cols-6 gap-1 border-b border-white/5 bg-slate-900/50">
           {[
-            { label: 'Broken', val: stats?.brokenLinks, color: 'text-red-400' },
-            { label: 'Console', val: stats?.consoleErrors, color: 'text-yellow-400' },
-            { label: 'A11y', val: stats?.accessibilityIssues, color: 'text-blue-400' },
-            { label: 'UI/UX', val: (reportSummary?.reportData?.uiIssues?.length || 0) + (reportSummary?.reportData?.responsiveIssues?.length || 0), color: 'text-eu-accent' },
-            { label: 'Network', val: stats?.networkIssues, color: 'text-slate-400' },
+            { label: 'UI/UX', val: stats?.uiIssues ?? (reportSummary?.reportData?.uiIssues?.length || 0), color: 'text-amber-400' },
+            { label: 'Forms', val: stats?.formIssues ?? (reportSummary?.reportData?.formIssues?.length || 0), color: 'text-orange-400' },
+            { label: 'Security', val: stats?.securityIssues ?? 0, color: 'text-rose-400' },
+            { label: 'Console', val: stats?.consoleErrors ?? 0, color: 'text-yellow-400' },
+            { label: 'Links', val: stats?.brokenLinks ?? 0, color: 'text-red-400' },
+            { label: 'A11y', val: stats?.accessibilityIssues ?? 0, color: 'text-blue-400' },
           ].map(({ label, val, color }) => (
             <div key={label} className="text-center">
-              <p className={`text-sm font-black font-mono ${val > 0 ? color : 'text-slate-600'}`}>{val ?? 0}</p>
-              <p className="text-[7px] font-black uppercase tracking-wider text-slate-600 truncate">{label}</p>
+              <p className={`text-xs font-black font-mono ${val > 0 ? color : 'text-slate-500'}`}>{val ?? 0}</p>
+              <p className="text-[8px] font-bold uppercase tracking-wider text-slate-400 truncate">{label}</p>
             </div>
           ))}
         </div>

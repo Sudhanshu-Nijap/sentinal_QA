@@ -46,7 +46,7 @@ router.post('/scan', async (req, res) => {
                 const msg = await Message.create({
                     chatId: chatId,
                     type: 'ai',
-                    content: `⚠️ **Security Neural Link Blocked**\n\n${verdict.explanation || verdict.reason || "Suspicious morphology detected."}`,
+                    content: `**Security Hazard Detected**\n\n${verdict.explanation || verdict.reason || "Suspicious morphology detected."}`,
                     metadata: { 
                         riskLevel: verdict.riskLevel,
                         reason: verdict.reason,
@@ -387,7 +387,7 @@ async function startScan(baseUrl, userId, force = false, chaosIntensity = 'stand
         
         if (chatId) {
             try {
-                const threatMsg = `### 🚨 SECURITY HAZARD DETECTED\n\n**Sentinel AI** has intercepted this request because the target domain matches critical phishing or malware distribution patterns.\n\n- **Threat Type**: ${securityCheck.threatType}\n- **Risk Score**: ${securityCheck.riskScore}%\n- **Logic**: ${securityCheck.reason}\n\n**Recommendation**: Protocol aborted for your system safety. Do not interact with this domain.`;
+                const threatMsg = `### SECURITY HAZARD DETECTED\n\n**Sentinel QA Engine** has intercepted this request because the target domain matches critical phishing or malware distribution patterns.\n\n- **Threat Type**: ${securityCheck.threatType}\n- **Risk Score**: ${securityCheck.riskScore}%\n- **Logic**: ${securityCheck.reason}\n\n**Recommendation**: Protocol aborted for system security. Do not interact with this domain.`;
                 
                 const msg = await Message.create({
                     chatId: chatId,

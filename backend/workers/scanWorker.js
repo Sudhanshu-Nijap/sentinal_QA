@@ -199,7 +199,10 @@ async function runMasterOrchestrator(data) {
                     consoleErrors: finalReport?.consoleErrors?.length || 0,
                     accessibilityIssues: finalReport?.accessibilityIssues?.length || 0,
                     networkIssues: finalReport?.networkLogs?.length || 0,
-                    securityIssues: finalReport?.securityIssues?.length || 0
+                    securityIssues: finalReport?.securityIssues?.length || 0,
+                    uiIssues: (finalReport?.uiIssues?.length || 0) + (finalReport?.responsiveIssues?.length || 0),
+                    formIssues: finalReport?.formIssues?.length || 0,
+                    pagesCrawled: finalReport?.pagesCrawled || 1
                 },
                 comparison: comparison?.previousReportId ? {
                     previousReportId: comparison.previousReportId,

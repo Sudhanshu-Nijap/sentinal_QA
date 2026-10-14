@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send, Bot, User, Shield, Activity,
-  RefreshCw, ChevronDown, Check, Loader2, ChevronUp, Lock
+  RefreshCw, ChevronDown, Check, Loader2, ChevronUp, Lock,
+  FormInput, Layout, ExternalLink, UserCheck, Wifi, Zap, Terminal
 } from 'lucide-react';
 import axios from 'axios';
 import io from 'socket.io-client';
@@ -160,12 +161,54 @@ const ChatInterface = ({
   const [chatMeta, setChatMeta] = useState(null); // { url, _id }
   const [latestReport, setLatestReport] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [scanParams, setScanParams] = useState({ scope: 'single', mode: 'specific', tests: ['console', 'network', 'forms', 'ui', 'lighthouse', 'accessibility', 'links'] });
+  const [scanParams, setScanParams] = useState({
+    scope: 'single',
+    mode: 'specific',
+    tests: ['console', 'network', 'forms', 'ui', 'security', 'lighthouse', 'accessibility', 'links']
+  });
   const [showSensors, setShowSensors] = useState(false);
   const messagesEndRef = useRef(null);
   const socketRef = useRef(null);
   const hasDispatchedRef = useRef(false);
   const isSendingRef = useRef(false);
+
+  // Active Report & Sensor Finding Metrics
+  const activeReport = latestReport || reports?.find(r => r.url === chatMeta?.url) || reports?.[0] || null;
+
+  const getSensorCount = (testKey) => {
+    if (!activeReport) return null;
+    switch (testKey) {
+      case 'ui':
+        return (activeReport.uiIssues?.length || 0) + (activeReport.responsiveIssues?.length || 0);
+      case 'forms':
+        return activeReport.formIssues?.length || 0;
+      case 'security':
+        return activeReport.securityIssues?.length || 0;
+      case 'console':
+        return activeReport.consoleErrors?.length || 0;
+      case 'links':
+        return activeReport.brokenLinks?.length || 0;
+      case 'network':
+        return Array.isArray(activeReport.networkLogs) ? activeReport.networkLogs.filter(n => n.status >= 400).length : (activeReport.networkLogs?.length || 0);
+      case 'accessibility':
+        return activeReport.accessibilityIssues?.length || 0;
+      case 'lighthouse':
+        return activeReport.lighthouseScores ? `${Math.round(activeReport.lighthouseScores.performance || 0)}%` : null;
+      default:
+        return null;
+    }
+  };
+
+  const totalDiscoveredAcrossSensors = activeReport ? (
+    (activeReport.formIssues?.length || 0) +
+    (activeReport.uiIssues?.length || 0) +
+    (activeReport.responsiveIssues?.length || 0) +
+    (activeReport.securityIssues?.length || 0) +
+    (activeReport.consoleErrors?.length || 0) +
+    (activeReport.brokenLinks?.length || 0) +
+    (activeReport.accessibilityIssues?.length || 0) +
+    (Array.isArray(activeReport.networkLogs) ? activeReport.networkLogs.filter(n => n.status >= 400).length : 0)
+  ) : 0;
 
   // ── Socket Infrastructure ────────────────────────────────────────────────────
   useEffect(() => {
@@ -192,11 +235,16 @@ const ChatInterface = ({
           // Construct a compatible latestReport object from the summary
           const normalized = {
             _id: msg.scanReportId,
+            url: msg.reportSummary.url,
             healthScore: msg.reportSummary.healthScore,
-            brokenLinks: { length: msg.reportSummary.stats.brokenLinks },
-            consoleErrors: { length: msg.reportSummary.stats.consoleErrors },
-            accessibilityIssues: { length: msg.reportSummary.stats.accessibilityIssues },
-            uiIssues: { length: msg.reportSummary.stats.uiIssues || 0 },
+            brokenLinks: { length: msg.reportSummary.stats?.brokenLinks || 0 },
+            consoleErrors: { length: msg.reportSummary.stats?.consoleErrors || 0 },
+            accessibilityIssues: { length: msg.reportSummary.stats?.accessibilityIssues || 0 },
+            uiIssues: { length: msg.reportSummary.stats?.uiIssues || 0 },
+            formIssues: { length: msg.reportSummary.stats?.formIssues || 0 },
+            securityIssues: { length: msg.reportSummary.stats?.securityIssues || 0 },
+            networkLogs: { length: msg.reportSummary.stats?.networkErrors || 0 },
+            lighthouseScores: msg.reportSummary.lighthouseScores || null,
             responsiveIssues: { length: 0 }
           };
           setLatestReport(normalized);
@@ -659,8 +707,8 @@ const ChatInterface = ({
                   className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
                   <div className={`flex flex-col gap-1 max-w-[85%] ${isUser ? 'items-end' : 'items-start'}`}>
                     <div className="flex items-center gap-1.5 px-1">
-                      {!isUser && (msg.content.includes('🚨') ? <Shield size={10} className="text-primary animate-pulse" /> : <Bot size={10} className="text-[var(--eu-text-main)] opacity-40" />)}
-                      <span className={`text-[8px] font-black uppercase tracking-[0.2em] ${!isUser && msg.content.includes('🚨') ? 'text-primary' : 'text-[var(--eu-text-main)] opacity-30'}`}>
+                      {!isUser && ((msg.content.includes('🚨') || msg.content.includes('SECURITY HAZARD')) ? <Shield size={10} className="text-primary animate-pulse" /> : <Bot size={10} className="text-[var(--eu-text-main)] opacity-40" />)}
+                      <span className={`text-[8px] font-black uppercase tracking-[0.2em] ${!isUser && (msg.content.includes('🚨') || msg.content.includes('SECURITY HAZARD')) ? 'text-primary' : 'text-[var(--eu-text-main)] opacity-30'}`}>
                         {isUser ? 'You' : 'Sentinel AI'}
                       </span>
                       <span className="text-[8px] text-slate-600 font-mono">{time}</span>
@@ -669,7 +717,7 @@ const ChatInterface = ({
                     <div className={`px-4 py-3 rounded-[18px] border text-[11px] leading-relaxed transition-all duration-500
                       ${isUser
                         ? 'bg-[var(--eu-bg-card)] rounded-tr-sm border-primary/20 text-[var(--eu-text-main)] opacity-90'
-                        : msg.content.includes('🚨')
+                        : (msg.content.includes('🚨') || msg.content.includes('SECURITY HAZARD'))
                           ? 'bg-primary/5 border-primary/40 rounded-tl-sm text-[var(--eu-text-main)] shadow-[0_0_20px_rgba(239,68,68,0.1)]'
                           : 'bg-[var(--eu-bg-card)] border-[var(--eu-glass-border)] rounded-tl-sm text-[var(--eu-text-main)] opacity-90'
                       }`}>
@@ -688,15 +736,95 @@ const ChatInterface = ({
           </AnimatePresence>
         )}
 
-        {activeView === 'qa' && (isTyping || (isScanning && messages.length === 0)) && (
-          <div className="flex justify-start">
-            <div className="flex gap-1.5 p-3 bg-[var(--eu-bg-card)] rounded-xl border border-[var(--eu-glass-border)]">
-              {[0, 1, 2].map(i => (
-                <motion.div key={i}
-                  animate={{ scale: [1, 1.2, 1], opacity: [0.3, 1, 0.3] }}
-                  transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
-                  className="size-1.5 bg-primary rounded-full" />
+        {/* ── Live Crawling & Auditing Progress Card ── */}
+        {isScanning && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-2xl bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 rounded-2xl p-5 md:p-6 shadow-md space-y-4 my-2"
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="size-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+                  <Loader2 size={18} className="animate-spin" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold uppercase tracking-wider animate-pulse font-outfit">
+                      Autonomous Crawl Active
+                    </span>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 font-mono">
+                      {globalScanProgress?.percent || 25}%
+                    </span>
+                  </div>
+                  <p className="text-sm font-bold text-slate-900 dark:text-white font-outfit mt-0.5">
+                    {globalScanProgress?.stage || 'Deep Crawling & Sensory Execution'}
+                  </p>
+                </div>
+              </div>
+              <div className="px-3 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-800 text-[10px] font-mono font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider">
+                Status: IN_PROGRESS
+              </div>
+            </div>
+
+            {/* Dynamic Progress Bar */}
+            <div className="space-y-1.5">
+              <div className="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden relative">
+                <motion.div
+                  className="h-full bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-500 rounded-full"
+                  initial={{ width: '15%' }}
+                  animate={{ width: `${Math.max(15, globalScanProgress?.percent || 25)}%` }}
+                  transition={{ duration: 0.5 }}
+                />
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-400 font-medium">
+                <span>Traversing DOM tree, internal links & API endpoints</span>
+                <span>Target: {chatMeta?.url ? (() => { try { return new URL(chatMeta.url).hostname; } catch(e) { return chatMeta.url; } })() : 'Autonomous Target'}</span>
+              </div>
+            </div>
+
+            {/* Active Sensors Status Badges */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+              {[
+                { label: 'Universal Crawler', icon: <ExternalLink size={11} /> },
+                { label: 'Form Fuzzer', icon: <FormInput size={11} /> },
+                { label: 'Secret Sniffer', icon: <Shield size={11} /> },
+                { label: 'Spatial Layout', icon: <Layout size={11} /> },
+                { label: 'Console Traps', icon: <Terminal size={11} /> },
+                { label: 'Silent API Net', icon: <Wifi size={11} /> },
+                { label: 'WCAG 2.1 A11y', icon: <UserCheck size={11} /> },
+                { label: 'Core Web Vitals', icon: <Zap size={11} /> }
+              ].map((s, idx) => (
+                <div key={idx} className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-1">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-indigo-600 dark:text-indigo-400 shrink-0">{s.icon}</span>
+                    <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200 truncate">{s.label}</span>
+                  </div>
+                  <span className="size-1.5 rounded-full bg-indigo-600 animate-ping shrink-0" />
+                </div>
               ))}
+            </div>
+
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 italic">
+              Discovered issues will automatically populate into your report dashboard and audit sensor badges.
+            </p>
+          </motion.div>
+        )}
+
+        {/* AI Typing Indicator (when AI is synthesizing response) */}
+        {!isScanning && isTyping && (
+          <div className="flex justify-start my-2">
+            <div className="flex items-center gap-3 p-3.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+              <Bot size={16} className="text-indigo-600 dark:text-indigo-400 animate-bounce" />
+              <div className="flex gap-1.5">
+                {[0, 1, 2].map(i => (
+                  <motion.div key={i}
+                    animate={{ scale: [1, 1.3, 1], opacity: [0.3, 1, 0.3] }}
+                    transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.15 }}
+                    className="size-1.5 bg-indigo-600 dark:bg-indigo-400 rounded-full" />
+                ))}
+              </div>
+              <span className="text-xs text-slate-600 dark:text-slate-400 font-medium font-outfit">Senior QA Agent analyzing...</span>
             </div>
           </div>
         )}
@@ -718,23 +846,66 @@ const ChatInterface = ({
                 ))}
               </div>
               <button onClick={() => setShowSensors(o => !o)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm ${showSensors ? 'bg-indigo-600 border border-indigo-600 text-white' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
-                Audit Sensors ({scanParams.tests.length}) <ChevronUp size={13} className={`transition-transform ${showSensors ? 'rotate-180' : ''}`} />
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm ${
+                  showSensors ? 'bg-indigo-600 border border-indigo-600 text-white' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'
+                }`}>
+                <span>Audit Sensors ({scanParams.tests.length} Active)</span>
+                {totalDiscoveredAcrossSensors > 0 && (
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${showSensors ? 'bg-white text-indigo-700' : 'bg-rose-50 border border-rose-200 text-rose-700 dark:bg-rose-950 dark:border-rose-800 dark:text-rose-300'}`}>
+                    {totalDiscoveredAcrossSensors} Issues
+                  </span>
+                )}
+                <ChevronUp size={13} className={`transition-transform ${showSensors ? 'rotate-180' : ''}`} />
               </button>
             </div>
             <AnimatePresence>
               {showSensors && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                  className="grid grid-cols-3 sm:grid-cols-4 xl:grid-cols-7 gap-2">
-                  {['console', 'network', 'forms', 'ui', 'lighthouse', 'accessibility', 'links'].map(test => {
-                    const labels = { console: 'Console', network: 'Network', forms: 'Forms', ui: 'UI/UX', lighthouse: 'Lighthouse', accessibility: 'A11y', links: 'Links' };
-                    const on = scanParams.tests.includes(test);
+                  className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2">
+                  {[
+                    { id: 'ui', label: 'UI/UX Layout', desc: 'Dead clicks & touch' },
+                    { id: 'forms', label: 'Form Fuzzer', desc: 'Boundary stress' },
+                    { id: 'security', label: 'Secret Sniffer', desc: 'API key & tokens' },
+                    { id: 'console', label: 'Console Traps', desc: 'JS exceptions' },
+                    { id: 'links', label: 'Broken Links', desc: '404 dead hrefs' },
+                    { id: 'network', label: 'Network/API', desc: 'Failed endpoints' },
+                    { id: 'accessibility', label: 'WCAG A11y', desc: 'ARIA & contrast' },
+                    { id: 'lighthouse', label: 'Web Vitals', desc: 'LCP & performance' },
+                  ].map(test => {
+                    const on = scanParams.tests.includes(test.id);
+                    const count = getSensorCount(test.id);
+                    const hasCount = count !== null && count !== undefined;
+                    const countNum = typeof count === 'number' ? count : parseInt(count, 10);
+                    const isPositive = !isNaN(countNum) && countNum > 0;
+
                     return (
-                      <button key={test} onClick={() => toggleTest(test)}
-                        className={`p-2.5 rounded-xl transition-all border text-xs font-bold flex items-center justify-between gap-1.5 ${on ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-700' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300'}`}>
-                        {labels[test]}
-                        <div className={`size-3.5 rounded-full border flex items-center justify-center ${on ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-400'}`}>
-                          {on && <Check size={8} strokeWidth={4} />}
+                      <button
+                        key={test.id}
+                        type="button"
+                        onClick={() => toggleTest(test.id)}
+                        className={`p-2.5 rounded-xl transition-all border text-xs font-bold flex flex-col justify-between gap-1.5 text-left ${
+                          on
+                            ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-300 dark:border-indigo-700'
+                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <span className="font-outfit truncate">{test.label}</span>
+                          <div className={`size-3.5 rounded-full border flex items-center justify-center shrink-0 ml-1 ${on ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-400'}`}>
+                            {on && <Check size={8} strokeWidth={4} />}
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between w-full text-[10px]">
+                          <span className="text-slate-500 dark:text-slate-400 font-normal truncate">{test.desc}</span>
+                          {hasCount && (
+                            <span className={`px-1.5 py-0.2 rounded-md font-mono font-bold shrink-0 ml-1 ${
+                              isPositive
+                                ? 'bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-300 border border-rose-300 dark:border-rose-700'
+                                : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
+                            }`}>
+                              {count}
+                            </span>
+                          )}
                         </div>
                       </button>
                     );

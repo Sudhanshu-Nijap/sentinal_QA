@@ -35,7 +35,31 @@ function App() {
     if (activeChatId) localStorage.setItem('sentinel_active_chat', activeChatId);
     else localStorage.removeItem('sentinel_active_chat');
   }, [activeChatId]);
-  const [viewingReportId, setViewingReportId] = useState(null);
+  const [viewingReportId, setViewingReportId] = useState(() => {
+    const match = window.location.pathname.match(/\/report\/([a-zA-Z0-9_-]+)/);
+    return match ? match[1] : null;
+  });
+
+  useEffect(() => {
+    if (viewingReportId) {
+      if (window.location.pathname !== `/report/${viewingReportId}`) {
+        window.history.pushState(null, '', `/report/${viewingReportId}`);
+      }
+    } else {
+      if (window.location.pathname.startsWith('/report/')) {
+        window.history.pushState(null, '', '/');
+      }
+    }
+  }, [viewingReportId]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const match = window.location.pathname.match(/\/report\/([a-zA-Z0-9_-]+)/);
+      setViewingReportId(match ? match[1] : null);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
   const [liveReportId, setLiveReportId] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -369,13 +393,13 @@ function App() {
           initial={{ y: -100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: -100, opacity: 0 }}
-          className={`fixed z-50 transition-all duration-700 ${isLoggedIn
+          className={`fixed z-50 transition-all duration-700 ${(isLoggedIn || viewingReportId)
             ? "top-0 left-0 w-full px-4 py-2 sm:px-6 sm:py-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-sm"
             : "top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-7xl px-4 py-3 md:px-8 md:py-4 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/90 dark:border-slate-800/90 shadow-md rounded-[20px]"
             } flex items-center justify-between`}
         >
           <div className="flex items-center gap-2 sm:gap-4">
-            {isLoggedIn && (
+            {(isLoggedIn || viewingReportId) && (
               <button
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                 className="lg:hidden p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
@@ -384,13 +408,13 @@ function App() {
                 <Command size={18} className="text-primary" />
               </button>
             )}
-            <div className={`size-7 sm:size-8 bg-indigo-50 dark:bg-indigo-950/50 rounded-lg flex items-center justify-center border border-indigo-200 dark:border-indigo-800 ${!isLoggedIn && 'shadow-sm'}`}>
+            <div className={`size-7 sm:size-8 bg-indigo-50 dark:bg-indigo-950/50 rounded-lg flex items-center justify-center border border-indigo-200 dark:border-indigo-800 ${!(isLoggedIn || viewingReportId) && 'shadow-sm'}`}>
               <Shield className="text-indigo-600 dark:text-indigo-400 size-3 sm:size-4" />
             </div>
             <a href="#home" className="font-outfit font-black text-base sm:text-xl tracking-tight uppercase text-slate-900 dark:text-white hover:opacity-80 transition-opacity">Sentinel</a>
           </div>
 
-          {!isLoggedIn && (
+          {!isLoggedIn && !viewingReportId && (
             <nav className="hidden lg:flex items-center gap-8 absolute left-1/2 -translate-x-1/2">
               {[
                 { name: 'Home', href: '#home' },
@@ -410,7 +434,7 @@ function App() {
             </nav>
           )}
 
-          {isLoggedIn && (
+          {(isLoggedIn || viewingReportId) && (
             <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 md:gap-2">
               {[
                 { id: 'qa', label: 'Chat', icon: <Bot size={15} />, title: 'AI Assistant' },
@@ -460,7 +484,7 @@ function App() {
 
       <main className="relative z-10 pt-4 md:pt-8 h-full">
         <AnimatePresence mode="wait">
-          {!isLoggedIn ? (
+          {!isLoggedIn && !viewingReportId ? (
             <motion.div
               key="landing-page"
               initial={{ opacity: 0 }}

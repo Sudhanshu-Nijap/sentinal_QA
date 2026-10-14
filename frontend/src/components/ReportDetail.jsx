@@ -1,15 +1,23 @@
 import { API_URL, SOCKET_URL } from '../config/api';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ChevronLeft, ExternalLink, AlertTriangle, Terminal, Layout,
+  ChevronLeft, ChevronRight, ExternalLink, AlertTriangle, Terminal, Layout,
   FormInput, Image, Zap, UserCheck, Loader2,
   CheckCircle2, Info, AlertCircle, BarChart3, Database, Shield, Cpu, Bot,
   Wifi, Trash2, Code, Copy, Check, Plus,
-  Activity, Sparkles, X, Search
+  Activity, Sparkles, X, Search, Radio, Smartphone, Lock
 } from 'lucide-react';
 import axios from 'axios';
+
+// Enterprise corporate text sanitizer - strips non-professional emojis from all diagnostics
+export const cleanText = (val) => {
+  if (!val || typeof val !== 'string') return val;
+  return val
+    .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{2B50}\u{200D}\u{FE0F}]/gu, '')
+    .trim();
+};
 
 const StatCard = ({ label, value, color, icon }) => (
   <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
@@ -109,6 +117,18 @@ const optimizeAndDeduplicateIssues = (items) => {
 const getTabData = (report, tab) => {
   let raw = [];
   switch (tab) {
+    case 'all':
+      raw = [
+        ...(report.formIssues || []).map(i => ({ ...i, category: 'Forms', form: i.formSelector || i.form || 'Input Element' })),
+        ...(report.uiIssues || []).map(i => ({ ...i, category: 'UI/UX', context: i.type || 'Viewport Layout' })),
+        ...(report.responsiveIssues || []).map(i => ({ ...i, category: 'UI/UX', context: 'Mobile Responsive Matrix' })),
+        ...(report.securityIssues || []).map(i => ({ ...i, category: 'Security', context: i.type || 'Secret Sniffer' })),
+        ...(report.consoleErrors || []).map(i => ({ ...i, category: 'Console', context: 'Runtime Exception', issue: i.message })),
+        ...(report.brokenLinks || []).map(i => ({ ...i, category: 'Links', context: 'Navigation Integrity', issue: `Broken Link: ${i.link} (HTTP ${i.status})` })),
+        ...(report.accessibilityIssues || []).map(i => ({ ...i, category: 'Accessibility', context: 'WCAG Compliance' })),
+        ...(report.networkLogs?.filter(n => n.status >= 400) || []).map(i => ({ ...i, category: 'Network', context: 'API Telemetry', issue: `${i.method || 'GET'} ${i.url} (${i.status})` }))
+      ];
+      break;
     case 'network': raw = report.networkLogs || []; break;
     case 'links': raw = report.brokenLinks || []; break;
     case 'console': raw = report.consoleErrors || []; break;
@@ -123,6 +143,7 @@ const getTabData = (report, tab) => {
 
 const getTableColumns = (tab) => {
   switch (tab) {
+    case 'all': return ['Category', 'Page', 'Issue', 'Severity', 'Context'];
     case 'network': return ['Page', 'Method', 'Status', 'Type', 'Url'];
     case 'links': return ['Page', 'Link', 'Status'];
     case 'console': return ['Page', 'Message', 'Severity', 'Type'];
@@ -292,6 +313,16 @@ const IssueTable = ({ data, columns, setRemediationCode, onAskAI, reportId }) =>
                       );
                     }
 
+                    if (col === 'Category') {
+                      return (
+                        <td key={col} className="py-3.5 px-4 bg-white dark:bg-slate-900 first:rounded-l-xl last:rounded-r-xl border-y border-slate-200 dark:border-slate-800 first:border-l last:border-r shadow-xs">
+                          <span className="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                            {value || row.category || 'General'}
+                          </span>
+                        </td>
+                      );
+                    }
+
                     if (col === 'RiskLevel' || col === 'Outcome') {
                       return (
                         <td key={col} className="py-3.5 px-4 bg-white dark:bg-slate-900 first:rounded-l-xl last:rounded-r-xl border-y border-slate-200 dark:border-slate-800 first:border-l last:border-r shadow-xs">
@@ -333,12 +364,12 @@ const IssueTable = ({ data, columns, setRemediationCode, onAskAI, reportId }) =>
                                 </span>
                               )}
                               <span className="text-xs font-bold text-slate-900 dark:text-white break-words leading-snug font-outfit">
-                                {value || '---'}
+                                {cleanText(value) || '---'}
                               </span>
                             </div>
                             {row.expected && (
                               <span className="text-[11px] text-slate-600 dark:text-slate-400 font-medium truncate max-w-sm">
-                                Expected: {row.expected}
+                                Expected: {cleanText(row.expected)}
                               </span>
                             )}
                           </div>
@@ -588,18 +619,153 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
   const [copied, setCopied] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [severityFilter, setSeverityFilter] = useState('all');
+  const [previewImage, setPreviewImage] = useState(null);
+
+  const totalIssuesCount = (
+    (report?.formIssues?.length || 0) +
+    (report?.uiIssues?.length || 0) +
+    (report?.responsiveIssues?.length || 0) +
+    (report?.securityIssues?.length || 0) +
+    (report?.consoleErrors?.length || 0) +
+    (report?.brokenLinks?.length || 0) +
+    (report?.accessibilityIssues?.length || 0) +
+    (report?.networkLogs?.filter(n => n.status >= 400)?.length || 0)
+  );
 
   const tabs = [
     { id: 'summary', label: 'Summary', icon: <Zap size={14} /> },
-    { id: 'network', label: 'Network', icon: <Wifi size={14} />, count: report?.networkLogs?.length || 0 },
-    { id: 'links', label: 'Links', icon: <ExternalLink size={14} />, count: report?.brokenLinks?.length || 0 },
-    { id: 'console', label: 'Console', icon: <Terminal size={14} />, count: report?.consoleErrors?.length || 0 },
+    { id: 'all', label: 'All Issues', icon: <AlertTriangle size={14} />, count: totalIssuesCount },
     { id: 'layout', label: 'UI/UX', icon: <Layout size={14} />, count: (report?.uiIssues?.length || 0) + (report?.responsiveIssues?.length || 0) },
-    { id: 'accessibility', label: 'Accessibility', icon: <UserCheck size={14} />, count: report?.accessibilityIssues?.length || 0 },
-    { id: 'security', label: 'Security', icon: <Shield size={14} className={report?.securityIssues?.length > 0 ? 'text-primary animate-pulse' : ''} />, count: report?.securityIssues?.length || 0 },
-    { id: 'screenshots', label: 'Screens', icon: <Image size={14} />, count: report?.screenshots?.length || 0 },
     { id: 'forms', label: 'Forms', icon: <FormInput size={14} />, count: report?.formIssues?.length || 0 },
+    { id: 'security', label: 'Security', icon: <Shield size={14} className={report?.securityIssues?.length > 0 ? 'text-rose-500 animate-pulse' : ''} />, count: report?.securityIssues?.length || 0 },
+    { id: 'console', label: 'Console', icon: <Terminal size={14} />, count: report?.consoleErrors?.length || 0 },
+    { id: 'links', label: 'Links', icon: <ExternalLink size={14} />, count: report?.brokenLinks?.length || 0 },
+    { id: 'network', label: 'Network', icon: <Wifi size={14} />, count: report?.networkLogs?.filter(n => n.status >= 400)?.length || 0 },
+    { id: 'accessibility', label: 'Accessibility', icon: <UserCheck size={14} />, count: report?.accessibilityIssues?.length || 0 },
+    { id: 'screenshots', label: 'Screens', icon: <Image size={14} />, count: report?.screenshots?.length || 0 },
   ];
+
+  const allDiscoveredIssues = useMemo(() => {
+    if (!report) return [];
+    const directIssues = report.aiInsights?.issues && report.aiInsights.issues.length > 0
+      ? report.aiInsights.issues
+      : [];
+
+    const sensorIssues = [
+      ...(report.formIssues || []).map((f, i) => ({
+        id: `form-${i}`,
+        title: f.issue || f.type || "Form Integrity Deviation",
+        issue: f.issue || f.observed || "Form boundary or validation defect detected.",
+        reason: f.technicalImpact || f.rootCause || "Input validation or state submission gap.",
+        fix: f.stepsToReproduce || [f.recommendation || "Implement client-side validation constraints."],
+        suggestedFix: f.suggestedFix || f.remediationCode || "",
+        severity: f.severity || "High",
+        testCaseId: f.testCaseId || `TC-FORM-${i + 1}`,
+        category: "Forms",
+        selector: f.formSelector || f.form || "Input element",
+        source: "Form Fuzzer Sensor"
+      })),
+      ...(report.uiIssues || []).map((u, i) => ({
+        id: `ui-${i}`,
+        title: u.issue || u.type || "UI/UX Layout Deviation",
+        issue: u.issue || u.observed || "Dead click, layout overflow, or touch target collision detected.",
+        reason: u.technicalImpact || u.rootCause || "Interactive element failed to trigger handler or overlaps viewport bounds.",
+        fix: u.stepsToReproduce || [u.recommendation || "Verify event binding and ensure pointer events."],
+        suggestedFix: u.suggestedFix || u.remediationCode || "",
+        severity: u.severity || "Medium",
+        testCaseId: u.testCaseId || `TC-UI-${i + 1}`,
+        category: "UI/UX",
+        selector: u.selector || "Viewport Element",
+        source: "Layout Sensor"
+      })),
+      ...(report.responsiveIssues || []).map((r, i) => ({
+        id: `resp-${i}`,
+        title: r.issue || "Mobile Responsive Collision",
+        issue: r.issue || "Element overflows mobile viewport or touch target is too small.",
+        reason: "Fixed viewport constraints or unoptimized mobile styles.",
+        fix: [r.recommendation || "Implement responsive media queries and min-height 44px for touch targets."],
+        suggestedFix: r.suggestedFix || "",
+        severity: "Medium",
+        testCaseId: `TC-RESP-${i + 1}`,
+        category: "UI/UX",
+        selector: r.selector || "Mobile Viewport",
+        source: "Viewport Sensor"
+      })),
+      ...(report.securityIssues || []).map((s, i) => ({
+        id: `sec-${i}`,
+        title: s.issue || s.type || "Security Threat Detected",
+        issue: s.issue || s.details || "API key leak, unencrypted storage, or malicious link pattern detected.",
+        reason: s.technicalImpact || s.reason || "Client-side exposure of sensitive credentials or dangerous external resource.",
+        fix: [s.suggestedFix || s.recommendation || "Revoke exposed credential immediately."],
+        suggestedFix: s.suggestedFix || "",
+        severity: s.severity || "Critical",
+        testCaseId: s.testCaseId || `TC-SEC-${i + 1}`,
+        category: "Security",
+        selector: s.selector || "Client Script",
+        source: "Secret Sniffer Sensor"
+      })),
+      ...(report.consoleErrors || []).map((c, i) => ({
+        id: `console-${i}`,
+        title: "Runtime JavaScript Exception",
+        issue: c.message ? c.message.substring(0, 200) : "Uncaught browser exception captured.",
+        reason: "Client-side code crash or unhandled promise rejection.",
+        fix: [c.recommendation || "Inspect call stack for null-reference collision."],
+        suggestedFix: `try {\n  // Target execution block\n} catch (error) {\n  console.error("Safeguarded exception:", error);\n}`,
+        severity: "High",
+        testCaseId: `TC-JS-${i + 1}`,
+        category: "Console",
+        selector: c.location || "Inline Script",
+        source: "Console Sensor"
+      })),
+      ...(report.brokenLinks || []).map((b, i) => ({
+        id: `link-${i}`,
+        title: `Broken Navigation Link (HTTP ${b.status || 404})`,
+        issue: `Link to ${b.link} returned HTTP status ${b.status || 'failure'}.`,
+        reason: "Resource permanently moved, endpoint deleted, or host connection refused.",
+        fix: [b.recommendation || "Update or remove invalid navigation href."],
+        suggestedFix: `// Verify destination endpoint: ${b.link}`,
+        severity: "Medium",
+        testCaseId: `TC-LINK-${i + 1}`,
+        category: "Links",
+        selector: b.link || "Anchor Href",
+        source: "Link Crawler Sensor"
+      })),
+      ...(report.accessibilityIssues || []).map((a, i) => ({
+        id: `a11y-${i}`,
+        title: a.issue || "ADA / WCAG Accessibility Violation",
+        issue: a.issue || "Missing ARIA landmarks or semantic markup violation.",
+        reason: "Interactive element not conforming to WCAG 2.1 accessibility criteria.",
+        fix: [a.recommendation || "Add proper aria-label, role, or form label attributes."],
+        suggestedFix: `<button aria-label="Action Button" type="submit">\n  <span>Click</span>\n</button>`,
+        severity: a.severity || "Medium",
+        testCaseId: `TC-A11Y-${i + 1}`,
+        category: "Accessibility",
+        selector: a.element || "DOM Element",
+        source: "Accessibility Sensor"
+      })),
+      ...(report.networkLogs?.filter(n => n.status >= 400) || []).map((n, i) => ({
+        id: `net-${i}`,
+        title: `Failed Network API Request (${n.status} ${n.method || 'GET'})`,
+        issue: `${n.method || 'GET'} request to ${n.url} failed with status ${n.status}.`,
+        reason: n.failureReason || "Endpoint unreachable, CORS blocked, or server returned 4xx/5xx error.",
+        fix: ["Verify server endpoint status, routing, and CORS configuration headers."],
+        suggestedFix: `// Check endpoint handler for ${n.url}`,
+        severity: n.status >= 500 ? "High" : "Medium",
+        testCaseId: `TC-NET-${i + 1}`,
+        category: "Network",
+        selector: n.url,
+        source: "Network Sensor"
+      }))
+    ];
+
+    if (sensorIssues.length === 0) return directIssues;
+    if (directIssues.length === 0) return sensorIssues;
+
+    // Combine both: prioritize sensor findings, add any unique AI insights
+    const existingTitles = new Set(sensorIssues.map(s => (s.title || s.issue || '').toLowerCase()));
+    const uniqueDirect = directIssues.filter(d => !existingTitles.has((d.title || d.issue || '').toLowerCase()));
+    return [...sensorIssues, ...uniqueDirect];
+  }, [report]);
 
   // Auto-reset activeTab if current one is not in the tabs list (safety)
   useEffect(() => {
@@ -662,6 +828,105 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
       </button>
     </div>
   );
+
+  if (report.status === 'in-progress') {
+    return (
+      <div className="space-y-6 max-w-4xl mx-auto py-8">
+        <div className="bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 rounded-3xl p-8 md:p-12 shadow-xl space-y-8 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-8 opacity-5">
+            <Radio size={160} className="text-indigo-600 animate-pulse" />
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
+            <div className="flex items-center gap-4">
+              <div className="relative size-14 rounded-2xl bg-indigo-50 dark:bg-indigo-950/80 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+                <Loader2 size={28} className="animate-spin" />
+                <div className="absolute inset-0 rounded-2xl border-2 border-indigo-500 animate-ping opacity-30" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold uppercase tracking-wider animate-pulse">
+                    Autonomous Crawl Active
+                  </span>
+                  <span className="text-xs text-slate-500 font-mono">
+                    LOG_{report._id.toString().slice(-8).toUpperCase()}
+                  </span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white font-outfit mt-1">
+                  Crawling & Auditing: {report.url}
+                </h2>
+              </div>
+            </div>
+            <button onClick={onBack} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all">
+              <ChevronLeft size={14} /> Back to Dashboard
+            </button>
+          </div>
+
+          {/* Crawl Progress & Telemetry */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-xs font-bold font-outfit">
+              <span className="text-indigo-600 dark:text-indigo-400 flex items-center gap-2">
+                <span className="size-2 rounded-full bg-indigo-600 animate-ping" />
+                Deep Page Discovery & Issue Detection Engine
+              </span>
+              <span className="text-slate-700 dark:text-slate-300 font-bold">
+                {report.pagesCrawled || 1} Pages Discovered
+              </span>
+            </div>
+            <div className="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden relative">
+              <div className="h-full bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-500 animate-pulse w-3/4 rounded-full" />
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+              Autonomous Playwright browser is hydrating DOM trees, navigating internal links, fuzzing form boundaries, testing mobile viewports, and checking client bundles for exposed API keys...
+            </p>
+          </div>
+
+          {/* Active Sensor Diagnostics Grid */}
+          <div className="space-y-3">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 font-outfit">
+              Audit Sensors Executing in Parallel
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { title: 'Universal Crawler', desc: 'SPA Hydration & Link Graph', icon: <ExternalLink size={14} />, status: 'Crawling' },
+                { title: 'Form Integrity Fuzzer', desc: 'Boundary Stress & XSS/SQLi', icon: <FormInput size={14} />, status: 'Fuzzing' },
+                { title: 'Spatial Layout Auditor', desc: 'Dead Clicks & Touch Targets', icon: <Layout size={14} />, status: 'Auditing' },
+                { title: 'Enterprise Secret Sniffer', desc: 'AWS, Stripe & Token Leaks', icon: <Shield size={14} />, status: 'Scanning' },
+                { title: 'Console Runtime Exception', desc: 'JS Error & Promise Traps', icon: <Terminal size={14} />, status: 'Tracing' },
+                { title: 'Network & Silent API', desc: '4xx/5xx & Unhandled Errors', icon: <Wifi size={14} />, status: 'Intercepting' },
+                { title: 'Accessibility WCAG 2.1', desc: 'ARIA & Contrast Compliance', icon: <UserCheck size={14} />, status: 'Validating' },
+                { title: 'Core Web Vitals Matrix', desc: 'LCP, CLS, FCP & TTFB Telemetry', icon: <Zap size={14} />, status: 'Measuring' },
+              ].map((s, idx) => (
+                <div key={idx} className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex flex-col justify-between gap-2">
+                  <div className="flex items-center justify-between">
+                    <span className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400">
+                      {s.icon}
+                    </span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <span className="size-1.5 rounded-full bg-indigo-600 animate-ping" />
+                      {s.status}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-900 dark:text-white font-outfit">{s.title}</p>
+                    <p className="text-[10px] text-slate-600 dark:text-slate-400 font-medium truncate mt-0.5">{s.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500 font-medium">
+            <span className="flex items-center gap-2">
+              <Loader2 size={13} className="animate-spin text-indigo-600" />
+              Live telemetry stream active. Auto-refreshing every 4s...
+            </span>
+            <span className="font-mono">Status: IN_PROGRESS</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const calculateHealth = () => {
     if (!report) return 100;
@@ -786,7 +1051,7 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
       </div>
 
       {/* --- Premium Navigation Grid --- */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4 px-6 md:px-0">
+      <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2.5 px-6 md:px-0">
         {tabs.map(tab => (
           <button
             key={tab.id}
@@ -862,14 +1127,21 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
                       <div className="flex flex-wrap items-center gap-3">
                         <div className="px-3 py-1 bg-indigo-600 text-[10px] font-bold uppercase tracking-wider rounded-lg text-white font-outfit">Autonomous QA Audit</div>
                         {report.aiInsights?.qaVerdict && (
-                          <div className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider font-outfit border ${
+                          <div className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider font-outfit border flex items-center gap-1.5 ${
                             report.aiInsights.qaVerdict.includes('BLOCK') 
                               ? 'bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-950/50 dark:border-rose-800 dark:text-rose-300'
                               : report.aiInsights.qaVerdict.includes('CONDITIONAL')
                               ? 'bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-950/50 dark:border-amber-800 dark:text-amber-300'
                               : 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950/50 dark:border-emerald-800 dark:text-emerald-300'
                           }`}>
-                            {report.aiInsights.qaVerdict.includes('BLOCK') ? '🛑' : report.aiInsights.qaVerdict.includes('CONDITIONAL') ? '⚠️' : '✅'} Verdict: {report.aiInsights.qaVerdict}
+                            <span className={`size-1.5 rounded-full ${
+                              report.aiInsights.qaVerdict.includes('BLOCK')
+                                ? 'bg-rose-600 animate-ping'
+                                : report.aiInsights.qaVerdict.includes('CONDITIONAL')
+                                ? 'bg-amber-500'
+                                : 'bg-emerald-600'
+                            }`} />
+                            <span>Verdict: {cleanText(report.aiInsights.qaVerdict)}</span>
                           </div>
                         )}
                         <div className="px-3 py-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[10px] font-bold uppercase tracking-wider rounded-lg text-slate-700 dark:text-slate-300 font-outfit">{report.url}</div>
@@ -878,39 +1150,140 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
                       {/* ── Autonomous QA Test Suite Coverage Matrix ── */}
                       <div className="flex flex-wrap items-center gap-2 pt-1 pb-1">
                         <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-outfit">Coverage:</span>
-                        <span className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200">📱 Viewports (375px/768px/1280px)</span>
-                        <span className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200">🛡️ Fuzzing & Boundaries</span>
-                        <span className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200">⚡ Dead-Clicks & Crashes</span>
-                        <span className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200">🔐 Storage & Secret Sniffer</span>
-                        <span className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200">🚀 Asset & DOM Bloat</span>
+                        <span className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                          <Smartphone size={12} className="text-indigo-600 dark:text-indigo-400" /> Viewport Matrix (375px / 768px / 1280px)
+                        </span>
+                        <span className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                          <Shield size={12} className="text-indigo-600 dark:text-indigo-400" /> Boundary Fuzzing
+                        </span>
+                        <span className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                          <AlertTriangle size={12} className="text-amber-500" /> Interaction & Dead Clicks
+                        </span>
+                        <span className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                          <Lock size={12} className="text-emerald-600 dark:text-emerald-400" /> Secret Sniffer & Storage
+                        </span>
+                        <span className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                          <Activity size={12} className="text-indigo-600 dark:text-indigo-400" /> Asset & Runtime Footprint
+                        </span>
                       </div>
 
                       <h3 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 dark:text-white leading-tight font-outfit">
-                        {report.status === 'completed' ? 'Diagnostic Analysis Summary' : report.status === 'in-progress' ? 'Analysis in Progress' : report.aiInsights?.classification || 'Standard Execution State'}
+                        {report.status === 'completed' ? 'Diagnostic Analysis Summary' : report.status === 'in-progress' ? 'Analysis in Progress' : cleanText(report.aiInsights?.classification) || 'Standard Execution State'}
                       </h3>
                       <p className="text-slate-700 dark:text-slate-300 text-base md:text-lg leading-relaxed font-normal">
-                        "{report.aiInsights.summary || 'Scan data is being synthesized into narrative insights...'}"
+                        "{cleanText(report.aiInsights.summary) || 'Scan data is being synthesized into narrative insights...'}"
                       </p>
                     </div>
                   </div>
 
+                  {/* ── Autonomous Audit Sensors Grid ── */}
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+                      <div className="flex items-center gap-2">
+                        <Radio size={14} className="text-indigo-600 dark:text-indigo-400 animate-pulse" />
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white font-outfit">
+                          Audit Sensors Live Telemetry & Findings
+                        </h4>
+                      </div>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-mono">
+                        8 Active Diagnostics
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-3">
+                      {[
+                        { id: 'layout', title: 'Spatial Layout Auditor', cat: 'UI/UX', desc: 'Dead clicks, touch targets & viewport boundaries', count: (report.uiIssues?.length || 0) + (report.responsiveIssues?.length || 0), icon: <Layout size={16} /> },
+                        { id: 'forms', title: 'Form Integrity Fuzzer', cat: 'Forms', desc: 'Input validation, double-submits & boundary stress', count: report.formIssues?.length || 0, icon: <FormInput size={16} /> },
+                        { id: 'security', title: 'Enterprise Secret Sniffer', cat: 'Security', desc: 'Stripe, AWS, JWT & credential leak patterns', count: report.securityIssues?.length || 0, icon: <Shield size={16} /> },
+                        { id: 'console', title: 'Console Runtime Traps', cat: 'Console', desc: 'Uncaught JS exceptions & promise rejections', count: report.consoleErrors?.length || 0, icon: <Terminal size={16} /> },
+                        { id: 'links', title: 'Broken Navigation Graph', cat: 'Links', desc: '404 dead links & structural anchor failures', count: report.brokenLinks?.length || 0, icon: <ExternalLink size={16} /> },
+                        { id: 'network', title: 'Network / Silent API', cat: 'Network', desc: 'Failed XHR/fetch calls & 4xx/5xx responses', count: (report.networkLogs?.filter(n => n.status >= 400)?.length || 0), icon: <Wifi size={16} /> },
+                        { id: 'accessibility', title: 'WCAG 2.1 Accessibility', cat: 'A11y', desc: 'ARIA landmarks, screen readers & color contrast', count: report.accessibilityIssues?.length || 0, icon: <UserCheck size={16} /> },
+                        { id: 'summary', title: 'Core Web Vitals Engine', cat: 'Vitals', desc: 'LCP, CLS, FCP & navigation timing', count: report.lighthouseScores ? `${Math.round(report.lighthouseScores.performance || 0)}%` : 'Active', icon: <Zap size={16} /> },
+                      ].map((sensor) => {
+                        const hasIssues = typeof sensor.count === 'number' && sensor.count > 0;
+                        return (
+                          <button
+                            key={sensor.id}
+                            onClick={() => {
+                              if (sensor.id === 'summary') setActiveTab('all');
+                              else setActiveTab(sensor.id);
+                            }}
+                            className={`p-4 rounded-xl border text-left transition-all duration-200 group flex flex-col justify-between gap-3 ${
+                              hasIssues
+                                ? 'bg-amber-50/40 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/60 hover:border-amber-400 dark:hover:border-amber-600'
+                                : 'bg-slate-50/50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <span className={`p-2 rounded-lg border ${
+                                hasIssues
+                                  ? 'bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700'
+                                  : 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800'
+                              }`}>
+                                {sensor.icon}
+                              </span>
+                              <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold font-mono border ${
+                                hasIssues
+                                  ? 'bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800 animate-pulse'
+                                  : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800'
+                              }`}>
+                                {typeof sensor.count === 'number' ? (hasIssues ? `${sensor.count} Issues` : '0 Anomalies') : sensor.count}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-slate-900 dark:text-white font-outfit group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                                {sensor.title}
+                              </p>
+                              <p className="text-[10px] text-slate-600 dark:text-slate-400 font-medium line-clamp-1 mt-0.5">
+                                {sensor.desc}
+                              </p>
+                            </div>
+                            <div className="flex items-center justify-between text-[10px] font-bold text-indigo-600 dark:text-indigo-400 group-hover:underline pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+                              <span>View Diagnostics</span>
+                              <ChevronRight size={11} className="group-hover:translate-x-0.5 transition-transform" />
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   <div className="space-y-6">
-                    {/* Issue Cards */}
-                    {report.aiInsights.issues?.length > 0 ? (
+                    {/* Discovered Issues Header */}
+                    {allDiscoveredIssues.length > 0 ? (
                       <div className="space-y-6">
-                        <div className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2 pb-3 border-b border-slate-200 dark:border-slate-800 font-outfit">
-                          <AlertTriangle size={15} className="text-amber-500" /> {report.aiInsights.issues.length} Critical Deviations Detected
+                        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+                          <div className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2 font-outfit">
+                            <AlertTriangle size={15} className="text-amber-500" /> {allDiscoveredIssues.length} Deviations Identified Across All Sensors
+                          </div>
+                          <button
+                            onClick={() => setActiveTab('all')}
+                            className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline uppercase tracking-wider flex items-center gap-1.5 font-outfit"
+                          >
+                            View Diagnostic Table ({allDiscoveredIssues.length}) <ChevronRight size={14} />
+                          </button>
                         </div>
                         <div className="grid grid-cols-1 gap-4">
-                          {report.aiInsights.issues.map((issue, idx) => {
+                          {allDiscoveredIssues.map((issue, idx) => {
                             const isCrit = issue.severity === 'Critical';
                             const isHigh = issue.severity === 'High';
                             const isMed = issue.severity === 'Medium';
                             return (
                               <div key={idx} className="border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 rounded-xl p-5 md:p-6 space-y-4 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all">
                                 <div className="flex flex-wrap items-center justify-between gap-3">
-                                  <div className="flex items-center gap-3">
-                                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md border ${
+                                  <div className="flex flex-wrap items-center gap-2.5">
+                                    {issue.category && (
+                                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-mono">
+                                        {issue.category}
+                                      </span>
+                                    )}
+                                    {issue.testCaseId && (
+                                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-mono">
+                                        {issue.testCaseId}
+                                      </span>
+                                    )}
+                                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md border ${
                                       isCrit ? 'bg-rose-50 border-rose-200 text-rose-700 dark:bg-rose-950/50 dark:border-rose-800 dark:text-rose-300' :
                                       isHigh ? 'bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-950/50 dark:border-orange-800 dark:text-orange-300' :
                                       isMed ? 'bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-950/50 dark:border-amber-800 dark:text-amber-300' :
@@ -918,32 +1291,37 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
                                     }`}>
                                       {issue.severity}
                                     </span>
-                                    <h4 className="text-base font-bold text-slate-900 dark:text-white font-outfit">{issue.title || issue.issue}</h4>
+                                    <h4 className="text-base font-bold text-slate-900 dark:text-white font-outfit">{cleanText(issue.title || issue.issue)}</h4>
                                   </div>
-                                  <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">Source: {issue.source === 'local' ? 'Neural Cache' : 'AI Diagnostic'}</span>
+                                  <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">Source: {issue.source || 'Audit Sensor'}</span>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                   <div className="space-y-1">
                                     <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 font-outfit">Issue Signature</p>
-                                    <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed font-medium">{issue.issue}</p>
+                                    <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed font-medium">{cleanText(issue.issue)}</p>
+                                    {issue.selector && (
+                                      <p className="text-[11px] font-mono text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-900 px-2 py-1 rounded border border-slate-200 dark:border-slate-700 mt-1 truncate">
+                                        Target: {issue.selector}
+                                      </p>
+                                    )}
                                   </div>
                                   <div className="space-y-1">
-                                    <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 font-outfit">Root Cause</p>
-                                    <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed font-medium">{issue.reason}</p>
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 font-outfit">Root Cause & Impact</p>
+                                    <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed font-medium">{cleanText(issue.reason)}</p>
                                   </div>
                                 </div>
 
-                                {issue.fix?.length > 0 && (
+                                {issue.fix && (Array.isArray(issue.fix) ? issue.fix.length > 0 : !!issue.fix) && (
                                   <div className="p-4 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 space-y-2">
                                     <p className="text-[10px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 font-outfit flex items-center gap-1.5">
                                       <Terminal size={12} className="text-indigo-600 dark:text-indigo-400" /> Remediation Steps
                                     </p>
                                     <div className="space-y-1.5">
-                                      {issue.fix.map((step, sIdx) => (
+                                      {(Array.isArray(issue.fix) ? issue.fix : [issue.fix]).map((step, sIdx) => (
                                         <div key={sIdx} className="flex gap-2 items-start text-xs text-slate-800 dark:text-slate-200 font-medium">
                                           <span className="size-4 shrink-0 rounded bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold text-[10px] flex items-center justify-center mt-0.5">{sIdx + 1}</span>
-                                          <span>{step}</span>
+                                          <span>{cleanText(step)}</span>
                                         </div>
                                       ))}
                                     </div>
@@ -951,9 +1329,9 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
                                 )}
 
                                 <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
-                                  {issue.remediationCode && (
+                                  {(issue.suggestedFix || issue.remediationCode) && (
                                     <button
-                                      onClick={() => setRemediationCode(issue.remediationCode)}
+                                      onClick={() => setRemediationCode(issue.suggestedFix || issue.remediationCode)}
                                       className="py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-sm font-outfit"
                                     >
                                       <Code size={14} /> View Suggested Code
@@ -1005,7 +1383,7 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
                               {sIdx + 1}
                             </span>
                             <p className="text-xs text-slate-800 dark:text-slate-200 font-medium leading-relaxed">
-                              {step}
+                              {cleanText(step)}
                             </p>
                           </div>
                         ))}

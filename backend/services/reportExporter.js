@@ -69,7 +69,7 @@ const generatePDF = async (reportId) => {
                 <span class="issue-num">${idx + 1}</span>
                 <span class="issue-title">${escHtml(issue.title || 'Unknown Issue')}</span>
                 <span class="severity-badge" style="background:${sc}20;color:${sc};border:1px solid ${sc}40">${issue.severity || 'Unknown'}</span>
-                ${issue.timeToFix ? `<span class="time-badge">⏱ ${issue.timeToFix}</span>` : ''}
+                ${issue.timeToFix ? `<span class="time-badge">Est. ${issue.timeToFix}</span>` : ''}
             </div>
             <div class="ai-issue-body">
                 ${issue.whatThisMeans ? `<div class="detail-row"><strong>What This Means:</strong> ${escHtml(issue.whatThisMeans)}</div>` : ''}
@@ -187,7 +187,7 @@ const generatePDF = async (reportId) => {
 <div class="section">
   <div class="section-header"><span class="section-tag">01</span><span class="section-title">Executive Summary</span></div>
   <div class="summary-box">
-    <p class="summary-text">${report.aiInsights?.summary || 'No AI summary generated for this neural trace.'}</p>
+    <p class="summary-text">${escHtml(report.aiInsights?.summary || 'No executive summary generated for this diagnostic trace.')}</p>
   </div>
   
   <div class="gauges">
@@ -328,14 +328,16 @@ const generateCSV = async (reportId) => {
     return rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
 };
 
-// Minimal HTML escape to prevent XSS inside report
+// Minimal HTML escape to prevent XSS inside report + strip emojis for professional enterprise formatting
 function escHtml(str) {
     if (!str) return '';
     return String(str)
+        .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{2B50}\u{200D}\u{FE0F}]/gu, '')
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
+        .replace(/"/g, '&quot;')
+        .trim();
 }
 
 module.exports = { generatePDF, generateCSV };
