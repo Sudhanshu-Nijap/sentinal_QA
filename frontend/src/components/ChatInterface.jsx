@@ -165,6 +165,7 @@ const ChatInterface = ({
   const messagesEndRef = useRef(null);
   const socketRef = useRef(null);
   const hasDispatchedRef = useRef(false);
+  const isSendingRef = useRef(false);
 
   // ── Socket Infrastructure ────────────────────────────────────────────────────
   useEffect(() => {
@@ -299,7 +300,8 @@ const ChatInterface = ({
   }, [activeChatId, loadMessages]);
 
   const normalizeUrl = (raw) => {
-    let t = raw.trim();
+    let t = (raw || '').trim();
+    if (!t) return '';
     if (!/^https?:\/\//i.test(t)) t = `https://${t}`;
     return t;
   };
@@ -307,7 +309,7 @@ const ChatInterface = ({
   const validateUrl = (u) => {
     try {
       const p = new URL(u);
-      return !!p.hostname && p.hostname.includes('.');
+      return !!p.hostname && (p.hostname.includes('.') || p.hostname === 'localhost' || p.hostname === '127.0.0.1');
     } catch { return false; }
   };
 
@@ -319,16 +321,30 @@ const ChatInterface = ({
   };
 
   const handleSend = async (e, manualInput = null, manualReportId = null) => {
-    if (e) e.preventDefault();
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
     
-    const finalInput = (manualInput || input).trim();
-    if (!finalInput || isTyping || isScanning || isSendingRef.current) return;
+    // Robust input resolution: check manualInput, React state, or DOM input element
+    const domVal = e?.target?.tagName === 'INPUT'
+      ? e.target.value
+      : (e?.target?.querySelector?.('input')?.value || document.querySelector('form input[type="text"]')?.value || '');
+    const finalInput = (manualInput || input || domVal).trim();
+    if (!finalInput || isTyping || isSendingRef.current) return;
     
     // Activate the Neural Lock
     isSendingRef.current = true;
-    if (!manualInput) setInput('');
+    setInput('');
 
-    const userId = localStorage.getItem('userId');
+    let userId = localStorage.getItem('userId');
+    if (!userId) {
+      try {
+        const u = JSON.parse(localStorage.getItem('userData') || '{}');
+        userId = u.id || u._id || u.userId;
+      } catch (err) {}
+    }
+    if (!userId) {
+      userId = 'user-' + Math.random().toString(36).substring(2, 9);
+      localStorage.setItem('userId', userId);
+    }
 
     let currentChatId = activeChatId;
 
@@ -339,11 +355,10 @@ const ChatInterface = ({
         const { data: report } = await axios.get(`${API_URL}/api/reports/${manualReportId}`);
         const { data: { chatId } } = await axios.post(`${API_URL}/api/chat/thread/start`, { 
            url: report.url, 
-           userId: localStorage.getItem('userId') 
+           userId 
         });
         currentChatId = chatId;
         if (onChatActivated) onChatActivated(chatId);
-        // Optimization: Pre-load messages for this newly found thread
         await loadMessages(chatId);
       } catch (err) {
         console.error('[AI Redirect]: Thread resolution failed', err);
@@ -352,15 +367,21 @@ const ChatInterface = ({
       }
     }
 
-    // ── Case 1: No active chat AND no redirected report → create thread + start scan ──
-    if (!currentChatId) {
-      const targetUrl = normalizeUrl(finalInput);
+    const isRescanCmd = /^(rescan|re-scan|re-test|retest)$/i.test(finalInput);
+    const isCleanUrl = !finalInput.includes(' ') && validateUrl(normalizeUrl(finalInput));
+    const normalizedInputUrl = isCleanUrl ? normalizeUrl(finalInput) : null;
+    const isNewUrl = isCleanUrl && normalizedInputUrl && (!chatMeta?.url || normalizedInputUrl !== normalizeUrl(chatMeta.url));
+
+    // ── Case 1: Starting a new scan (no active chat OR a new URL was entered) ──
+    if (!currentChatId || isNewUrl) {
+      const targetUrl = normalizedInputUrl || normalizeUrl(finalInput);
       if (!validateUrl(targetUrl)) {
         setMessages(prev => [...prev, {
           _id: 'err-' + Date.now(), type: 'system',
-          content: 'Invalid URL. Please provide a valid domain (e.g. example.com)',
+          content: 'Invalid URL. Please provide a valid domain (e.g. example.com or https://example.com)',
           createdAt: new Date()
         }]);
+        isSendingRef.current = false;
         return;
       }
 
@@ -375,12 +396,12 @@ const ChatInterface = ({
         });
         
         setIsScanning(true);
+        if (onChatActivated) onChatActivated(chatId);
         if (scanData.reportId) onScanStarted(scanData.reportId, chatId);
       } catch (err) {
         const errMsg = err.response?.data?.error || err.message;
         
         if (errMsg.includes('Security Block')) {
-          // Extract just the high-level status (e.g., "Security Block [HIGH]")
           const highLevel = errMsg.split(' - ')[0] || "Security Block Detected";
           setMessages(prev => [...prev, {
             _id: 'err-' + Date.now(), type: 'system',
@@ -396,18 +417,15 @@ const ChatInterface = ({
         }
       } finally {
         setIsTyping(false);
+        isSendingRef.current = false;
       }
       return;
     }
 
-    // ── Case 2: Rescan — only if explicitly typed "rescan" or it's a clean URL (no spaces) ──
-    const isRescanCmd = /^(rescan|re-scan|re-test|retest)$/i.test(finalInput.trim());
-    const isCleanUrl = !finalInput.includes(' ') && validateUrl(normalizeUrl(finalInput));
-
-    if (isRescanCmd || isCleanUrl) {
+    // ── Case 2: Rescan — only if explicitly typed "rescan" or current URL is re-entered ──
+    if (isRescanCmd || (isCleanUrl && normalizedInputUrl && chatMeta?.url && normalizedInputUrl === normalizeUrl(chatMeta.url))) {
       setIsTyping(true);
       try {
-        // Resolve URL — use chatMeta if loaded, otherwise fetch the chat directly
         let targetUrl = chatMeta?.url;
         if (!targetUrl) {
           const { data: chatData } = await axios.get(`${API_URL}/api/chat/threads?userId=${userId}`);
@@ -415,7 +433,11 @@ const ChatInterface = ({
           targetUrl = found?.url;
           if (found) setChatMeta(found);
         }
-        if (!targetUrl) { setIsTyping(false); return; }
+        if (!targetUrl) { 
+          setIsTyping(false); 
+          isSendingRef.current = false;
+          return; 
+        }
 
         await axios.post(`${API_URL}/api/chat/thread/${currentChatId}/message`, { type: 'user', content: finalInput });
         await axios.post(`${API_URL}/api/chat/thread/${currentChatId}/message`, { type: 'system', content: 'Rescan Initiated' });
@@ -429,8 +451,7 @@ const ChatInterface = ({
       } catch (err) {
         if (err.response?.status === 403) {
            console.log('[SecurityGate]: Blocked rescan redirection due to threat.');
-           isSendingRef.current = false;
-           return; // Stop redirection
+           return;
         }
         console.error('[Rescan Error]:', err.message);
       } finally {
@@ -447,12 +468,10 @@ const ChatInterface = ({
 
     try {
       const latestReport = [...messages].reverse().find(m => m.type === 'report' || m.type === 'rescan');
-      const { data } = await axios.post(`${API_URL}/api/chat/thread/${currentChatId}/ask`, {
+      await axios.post(`${API_URL}/api/chat/thread/${currentChatId}/ask`, {
         message: finalInput,
         scanReportId: manualReportId || latestReport?.scanReportId || null
       });
-      // AI message addition is now handled exclusively by the 'new-message' socket event
-      // to prevent duplicate bubbles in the UI.
     } catch (err) {
       const errMsg = err.response?.data?.error || err.message || 'Neural uplink failure.';
       console.error('[Ask AI Error]:', errMsg);
@@ -463,7 +482,7 @@ const ChatInterface = ({
       }]);
     } finally {
       setIsTyping(false);
-      isSendingRef.current = false; // Release the Neural Lock
+      isSendingRef.current = false;
     }
   };
 
@@ -685,7 +704,7 @@ const ChatInterface = ({
       </div>
 
       {/* ── Footer / Input ── */}
-      {activeView === 'qa' && (
+      {(activeView === 'qa' || activeView === 'chat') && (
         <div className="p-4 bg-slate-50/90 dark:bg-slate-900/90 z-10 border-t border-slate-200 dark:border-slate-800">
           {/* Scan params (always visible to allow reconfiguring for rescans) */}
           <div className="max-w-5xl mx-auto mb-3 space-y-2.5">
@@ -730,12 +749,17 @@ const ChatInterface = ({
               type="text"
               value={input}
               onChange={e => setInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend(e);
+                }
+              }}
               placeholder={activeChatId ? 'Ask Senior QA a question about this scan... (e.g. "what are the critical security bugs?")' : 'Enter a website URL to start autonomous QA audit (e.g. https://example.com)...'}
-              disabled={isScanning}
-              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl py-3 px-5 pr-14 text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-sm transition-all placeholder:text-slate-400 disabled:opacity-50"
+              className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl py-3 px-5 pr-14 text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-sm transition-all placeholder:text-slate-400"
             />
-            <button type="submit" disabled={!input.trim() || isTyping || isScanning}
-              className={`absolute right-2.5 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-all ${input.trim() && !isTyping && !isScanning ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm' : 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500'}`}>
+            <button type="submit" disabled={isTyping}
+              className={`absolute right-2.5 top-1/2 -translate-y-1/2 p-2 rounded-lg transition-all ${input.trim() && !isTyping ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm' : 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500'}`}>
               <Send size={15} />
             </button>
           </form>

@@ -44,7 +44,7 @@ function App() {
     const saved = localStorage.getItem('sentinel_white_theme_preference');
     return saved ? saved : 'light';
   });
-  const [activeView, setActiveView] = useState('chat');
+  const [activeView, setActiveView] = useState('qa');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [reports, setReports] = useState([]);
@@ -652,6 +652,7 @@ function App() {
                         pendingMessage={pendingChat?.message}
                         pendingReportId={pendingChat?.reportId}
                         onMessageConsumed={() => setPendingChat(null)}
+                        onChatActivated={(chatId) => setActiveChatId(chatId)}
                         reports={reports}
                         setAlert={setAlert}
                         confirm={confirm}
