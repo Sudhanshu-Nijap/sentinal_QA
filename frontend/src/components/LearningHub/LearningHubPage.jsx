@@ -1,16 +1,17 @@
-import { API_URL, SOCKET_URL } from '../../config/api';
 import React, { useState, useMemo } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Book, Search, Star, CheckCircle, ChevronRight, X, 
+  BookOpen, Search, Star, CheckCircle, ChevronRight, X, 
   Code, Lightbulb, Terminal, Zap, MessageSquare, 
-  AlertTriangle, Filter, LayoutGrid, Activity
+  AlertTriangle, Filter, LayoutGrid, Activity, Sparkles,
+  Send, Loader2, Copy, Check
 } from 'lucide-react';
+import { API_URL } from '../../config/api';
 import data from '../../data/learningHubData.json';
 
 const categories = [
-  "All Issues",
+  "All Topics",
   "Debugging Basics", 
   "Common Errors", 
   "Best Practices", 
@@ -24,10 +25,16 @@ const categories = [
 
 const LearningHubPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState("All Issues");
+  const [activeCategory, setActiveCategory] = useState("All Topics");
   const [selectedTopic, setSelectedTopic] = useState(null);
-  const [bookmarks, setBookmarks] = useState(() => JSON.parse(localStorage.getItem('sentinel_hub_bookmarks') || '[]'));
-  const [completed, setCompleted] = useState(() => JSON.parse(localStorage.getItem('sentinel_hub_completed') || '[]'));
+  const [bookmarks, setBookmarks] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('sentinel_hub_bookmarks') || '[]'); }
+    catch(e) { return []; }
+  });
+  const [completed, setCompleted] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('sentinel_hub_completed') || '[]'); }
+    catch(e) { return []; }
+  });
   const [aiInput, setAiInput] = useState('');
   const [aiResponse, setAiResponse] = useState(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -46,16 +53,19 @@ const LearningHubPage = () => {
 
   const filteredTopics = useMemo(() => {
     return data.filter(t => {
-      const matchSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          t.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          t.category.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchCategory = activeCategory === "All Issues" || t.category === activeCategory;
+      const matchSearch = !searchQuery || 
+        (t.title || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+        (t.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (t.category || '').toLowerCase().includes(searchQuery.toLowerCase());
+      const matchCategory = activeCategory === "All Topics" || t.category === activeCategory;
       return matchSearch && matchCategory;
     });
   }, [searchQuery, activeCategory]);
 
-  const handleAiAsk = async () => {
-    if (!aiInput.trim()) return;
+  const handleAiAsk = async (e) => {
+    if (e) e.preventDefault();
+    if (!aiInput.trim() || isAiLoading) return;
+
     setIsAiLoading(true);
     setAiResponse(null);
     try {
@@ -63,159 +73,272 @@ const LearningHubPage = () => {
       setAiResponse(data);
       setAiInput('');
     } catch (e) {
-      console.error('Neural consult failed', e);
       setAiResponse({
-        explanation: "Neural substrate is currently offline. Please verify your backend uplink.",
-        example: "// FALLBACK_DIAGNOSTIC\nconsole.error('Link Lost');",
-        fix: "Check your local server status."
+        explanation: "Could not connect to the AI diagnostic assistant. Please verify your backend server connection.",
+        example: "// Error: Connection failed\nconsole.error('Diagnostic endpoint unreachable');",
+        fix: "Check that your backend server is running on port 5005."
       });
     } finally {
       setIsAiLoading(false);
     }
   };
 
-  const progress = Math.round((completed.length / data.length) * 100);
+  const progressPercent = data.length > 0 ? Math.round((completed.length / data.length) * 100) : 0;
 
   return (
-    <div className="h-full flex flex-col font-outfit">
-      {/* Header Section */}
-      <div className="flex-none mb-8">
-        <div className="flex items-center justify-between gap-6 flex-wrap">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <div className="size-10 rounded-xl bg-eu-accent/10 border border-eu-accent/20 flex items-center justify-center shadow-neon">
-                <Book className="text-eu-accent" size={20} />
-              </div>
-              <div>
-                <h1 className="text-2xl font-black uppercase tracking-tight-mega premium-gradient-text">Learning Hub</h1>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 opacity-60">Neural Learning & Debugging Matrix</p>
-              </div>
-            </div>
+    <div className="space-y-6 max-w-6xl mx-auto pb-12 font-inter">
+      {/* ── Header Card ── */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex items-start sm:items-center gap-4">
+          <div className="size-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/80 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0 shadow-xs">
+            <BookOpen size={24} />
           </div>
-          
-          <div className="flex-1 max-w-md relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 opacity-40" size={16} />
-            <input 
-              type="text" 
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search neural topics..."
-              className="w-full bg-[var(--eu-bg-void)] border border-[var(--eu-glass-border)] rounded-2xl py-3 pl-12 pr-6 text-xs uppercase font-black tracking-widest text-white outline-none focus:border-eu-accent/30 transition-all placeholder:opacity-30"
+          <div>
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white font-outfit">
+                QA Knowledge & Debugging Hub
+              </h1>
+              <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 text-xs font-bold font-mono">
+                {data.length} Topics
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+              Curated guides, error diagnostics, and practical remediation patterns for web developers.
+            </p>
+          </div>
+        </div>
+
+        {/* Progress Tracker */}
+        <div className="bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 rounded-2xl p-4 min-w-[200px] shrink-0">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-300 font-outfit">
+              Progress
+            </span>
+            <span className="text-xs font-black font-mono text-indigo-600 dark:text-indigo-400">
+              {completed.length} of {data.length} ({progressPercent}%)
+            </span>
+          </div>
+          <div className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: `${progressPercent}%` }}
+              transition={{ duration: 0.5, ease: 'easeOut' }}
+              className="h-full bg-gradient-to-r from-indigo-600 to-cyan-500 rounded-full"
             />
           </div>
-
-          <div className="min-w-[140px] text-right">
-            <div className="text-2xl font-black text-eu-accent leading-none">{progress}%</div>
-            <div className="text-[8px] font-black uppercase tracking-widest text-slate-600 mt-1">Matrix Mastery</div>
-            <div className="w-full h-1 bg-white/5 rounded-full mt-2 overflow-hidden border border-white/5">
-              <motion.div 
-                initial={{ width: 0 }}
-                animate={{ width: `${progress}%` }}
-                className="h-full bg-eu-accent shadow-neon" 
-              />
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* Topics Grid */}
-      <div className="flex-1 flex gap-8 overflow-hidden min-h-0">
-        {/* Left Sidebar categories */}
-        <div className="w-64 h-full flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-2 flex-none">
-          <p className="text-[9px] font-black uppercase tracking-widest text-slate-600 mb-2 px-4 flex items-center gap-2">
-            <Filter size={10} /> Protocols
-          </p>
-          {categories.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={`text-left px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${
-                activeCategory === cat 
-                ? 'bg-eu-accent/10 border-eu-accent/30 text-eu-accent shadow-neon' 
-                : 'border-transparent text-slate-500 hover:bg-white/5'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-
-          {/* End Protocols */}
+      {/* ── Ask AI Consult Bar ── */}
+      <form onSubmit={handleAiAsk} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 sm:p-4 shadow-xs flex items-center gap-3">
+        <div className="size-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+          <Sparkles size={18} />
         </div>
+        <input 
+          type="text"
+          value={aiInput}
+          onChange={e => setAiInput(e.target.value)}
+          placeholder="Ask AI: 'How do I fix a CORS issue?' or 'Explain 403 Forbidden'..."
+          className="flex-1 bg-transparent text-xs sm:text-sm text-slate-900 dark:text-white placeholder:text-slate-400 outline-none"
+        />
+        <button
+          type="submit"
+          disabled={!aiInput.trim() || isAiLoading}
+          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-40 shrink-0"
+        >
+          {isAiLoading ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+          <span>Ask AI</span>
+        </button>
+      </form>
 
-        {/* Content Area */}
-        <div className="flex-1 h-full overflow-y-auto custom-scrollbar pb-12">
-          <AnimatePresence mode="popLayout">
-            {aiResponse && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95, y: -20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="mb-8 p-6 glass-euphoria border border-eu-accent/30 rounded-3xl relative"
-              >
-                <button 
-                  onClick={() => setAiResponse(null)}
-                  className="absolute top-4 right-4 text-slate-500 hover:text-white"
-                >
-                   <X size={14} />
-                </button>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="size-8 rounded-lg bg-eu-accent flex items-center justify-center text-white">
-                    <Zap size={16} />
-                  </div>
-                  <h3 className="text-xs font-black uppercase tracking-widest">Neural Insight</h3>
-                </div>
-                <p className="text-[11px] text-slate-300 leading-relaxed mb-4">{aiResponse.explanation}</p>
-                <div className="bg-black/60 rounded-2xl p-4 mb-4 border border-white/5 font-mono text-[10px]">
-                  <pre className="text-eu-accent">{aiResponse.example}</pre>
-                </div>
-                <div className="flex items-center gap-2 p-3 bg-eu-accent/10 border border-eu-accent/20 rounded-xl mb-4">
-                  <Lightbulb size={12} className="text-eu-accent" />
-                  <p className="text-[9px] font-bold text-white uppercase tracking-wider">Fix: {aiResponse.fix}</p>
-                </div>
-                {aiResponse.steps && (
-                  <div className="space-y-2">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2">Tactical Steps:</p>
-                    {aiResponse.steps.map((step, idx) => (
-                      <div key={idx} className="flex gap-3 text-[10px] text-slate-300 bg-white/5 p-2 rounded-lg border border-white/5">
-                        <span className="text-eu-accent font-black">0{idx + 1}</span>
-                        {step}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </motion.div>
+      {/* ── AI Response Card ── */}
+      <AnimatePresence>
+        {aiResponse && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/80 rounded-2xl p-5 sm:p-6 space-y-4 relative shadow-xs"
+          >
+            <button 
+              onClick={() => setAiResponse(null)}
+              className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-800 transition-all"
+            >
+              <X size={16} />
+            </button>
+            <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300">
+              <Sparkles size={16} />
+              <h3 className="text-xs font-bold uppercase tracking-wider font-outfit">AI QA Insight</h3>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed">
+              {aiResponse.explanation}
+            </p>
+            {aiResponse.example && (
+              <div className="bg-slate-950 text-indigo-300 rounded-xl p-4 font-mono text-xs overflow-x-auto border border-slate-800">
+                <pre>{aiResponse.example}</pre>
+              </div>
             )}
-          </AnimatePresence>
+            {aiResponse.fix && (
+              <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs text-emerald-900 dark:text-emerald-200 font-medium">
+                <strong>Recommended Fix:</strong> {aiResponse.fix}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-          {filteredTopics.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center opacity-20 text-center">
-              <Zap size={60} className="mb-4" />
-              <h3 className="text-xl font-black uppercase tracking-widest">No protocols found</h3>
-              <p className="text-xs uppercase tracking-widest mt-2">Adjust your neural filters.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredTopics.map(topic => (
-                <TopicCard 
-                  key={topic.id} 
-                  topic={topic}
-                  isBookmarked={bookmarks.includes(topic.id)}
-                  isCompleted={completed.includes(topic.id)}
-                  onToggleBookmark={() => toggleBookmark(topic.id)}
-                  onToggleComplete={() => toggleComplete(topic.id)}
-                  onClick={() => setSelectedTopic(topic)}
-                />
-              ))}
-            </div>
+      {/* ── Search & Categories Filter ── */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-3">
+        {/* Search Input */}
+        <div className="relative">
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search guides, errors, or troubleshooting patterns..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+          />
+          {searchQuery && (
+            <button 
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            >
+              <X size={14} />
+            </button>
           )}
         </div>
+
+        {/* Category Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar">
+          {categories.map((cat) => {
+            const isSelected = activeCategory === cat;
+            const count = cat === "All Topics" 
+              ? data.length 
+              : data.filter(d => d.category === cat).length;
+
+            return (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 shrink-0 ${
+                  isSelected
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <span>{cat}</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-indigo-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Modals */}
+      {/* ── Topics Grid ── */}
+      {filteredTopics.length === 0 ? (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-16 text-center shadow-xs flex flex-col items-center justify-center max-w-md mx-auto space-y-3">
+          <div className="size-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+            <Search size={24} />
+          </div>
+          <h3 className="text-base font-bold text-slate-900 dark:text-white font-outfit">No Guides Found</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            Try adjusting your search query or switching to another category.
+          </p>
+          <button
+            onClick={() => { setSearchQuery(''); setActiveCategory('All Topics'); }}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold"
+          >
+            Reset Filters
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {filteredTopics.map((topic) => {
+            const isBookmarked = bookmarks.includes(topic.id);
+            const isCompleted = completed.includes(topic.id);
+
+            return (
+              <motion.div
+                key={topic.id}
+                layout
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs hover:border-indigo-300 dark:hover:border-indigo-700 transition-all flex flex-col justify-between h-[250px] relative group cursor-pointer ${
+                  isCompleted ? 'border-emerald-300 dark:border-emerald-800/80 bg-emerald-50/20 dark:bg-emerald-950/10' : ''
+                }`}
+                onClick={() => setSelectedTopic(topic)}
+              >
+                {/* Top Row: Category + Star */}
+                <div className="flex items-center justify-between gap-2" onClick={(e) => e.stopPropagation()}>
+                  <span className="px-2.5 py-1 rounded-md bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold font-mono uppercase tracking-wider">
+                    {topic.category}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {isCompleted && (
+                      <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider font-outfit">
+                        <CheckCircle size={13} fill="currentColor" className="text-white dark:text-slate-900" /> Mastered
+                      </span>
+                    )}
+                    <button
+                      onClick={() => toggleBookmark(topic.id)}
+                      className={`p-1.5 rounded-lg transition-all ${
+                        isBookmarked ? 'text-amber-500 bg-amber-50 dark:bg-amber-950/50' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      }`}
+                      title={isBookmarked ? 'Remove bookmark' : 'Bookmark topic'}
+                    >
+                      <Star size={14} fill={isBookmarked ? 'currentColor' : 'none'} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="my-2 min-w-0">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white line-clamp-2 font-outfit group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                    {topic.title}
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-3 leading-relaxed mt-1.5">
+                    {topic.description}
+                  </p>
+                </div>
+
+                {/* Bottom Row: Read More & Mark Completed */}
+                <div 
+                  className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800 text-xs" 
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    onClick={() => setSelectedTopic(topic)}
+                    className="font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1 hover:underline"
+                  >
+                    Read Guide <ChevronRight size={13} />
+                  </button>
+
+                  <button
+                    onClick={() => toggleComplete(topic.id)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                      isCompleted 
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' 
+                        : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'
+                    }`}
+                  >
+                    {isCompleted ? <Check size={12} strokeWidth={3} /> : null}
+                    <span>{isCompleted ? 'Completed' : 'Complete'}</span>
+                  </button>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Topic Detail Modal ── */}
       <AnimatePresence>
         {selectedTopic && (
-          <TopicModal 
-            topic={selectedTopic} 
+          <TopicModal
+            topic={selectedTopic}
             onClose={() => setSelectedTopic(null)}
             isBookmarked={bookmarks.includes(selectedTopic.id)}
             isCompleted={completed.includes(selectedTopic.id)}
@@ -228,151 +351,135 @@ const LearningHubPage = () => {
   );
 };
 
-const TopicCard = ({ topic, isBookmarked, isCompleted, onToggleBookmark, onToggleComplete, onClick }) => (
-  <motion.div
-    layout
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    whileHover={{ y: -5 }}
-    className={`group p-6 bg-[var(--eu-bg-card)] border border-[var(--eu-glass-border)] rounded-[32px] flex flex-col h-[280px] shadow-sm hover:shadow-2xl hover:border-eu-accent/30 transition-all relative ${isCompleted ? 'ring-2 ring-eu-accent shadow-neon transition-all-slow' : ''}`}
-  >
-    {isCompleted && (
-       <div className="absolute top-4 right-12 text-eu-accent scale-125">
-         <CheckCircle size={16} fill="currentColor" stroke="none" />
-       </div>
-    )}
-    
-    <div className="flex-none mb-4 flex items-center justify-between">
-      <span className="px-3 py-1 bg-white/5 border border-white/10 rounded-full text-[7px] font-black uppercase tracking-widest text-slate-500">
-        {topic.category}
-      </span>
-      <button 
-        onClick={(e) => { e.stopPropagation(); onToggleBookmark(); }}
-        className={`p-2 rounded-xl transition-all ${isBookmarked ? 'bg-eu-accent/20 text-eu-accent shadow-neon' : 'hover:bg-white/5 text-slate-600'}`}
-      >
-        <Star size={14} fill={isBookmarked ? "currentColor" : "none"} />
-      </button>
-    </div>
+const TopicModal = ({ topic, onClose, isBookmarked, isCompleted, onToggleBookmark, onToggleComplete }) => {
+  const [copied, setCopied] = useState(false);
 
-    <div className="flex-1 min-w-0" onClick={onClick}>
-      <h3 className="text-sm font-black text-white uppercase tracking-tight mb-2 group-hover:text-eu-accent transition-colors truncate">
-        {topic.title}
-      </h3>
-      <p className="text-[10px] text-slate-400 leading-relaxed overflow-hidden line-clamp-3 opacity-70">
-        {topic.description}
-      </p>
-    </div>
+  const handleCopy = () => {
+    if (topic.example) {
+      navigator.clipboard.writeText(topic.example);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
-    <div className="flexitems-center justify-between gap-4 pt-4 mt-auto border-t border-white/5">
-      <button 
-        onClick={onClick}
-        className="text-[9px] font-black uppercase tracking-widest text-eu-accent hover:opacity-80 transition-all flex items-center gap-1"
+  return (
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-xs font-inter">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95, y: 15 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 15 }}
+        className="w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl p-6 sm:p-8 space-y-6 max-h-[85vh] overflow-y-auto custom-scrollbar"
       >
-        Read More <ChevronRight size={12} />
-      </button>
-      
-      <button 
-        onClick={(e) => { e.stopPropagation(); onToggleComplete(); }}
-        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all ${isCompleted ? 'bg-eu-accent text-white shadow-neon' : 'bg-white/5 text-slate-500 hover:text-white'}`}
-      >
-        {isCompleted ? 'Completed' : 'Complete'}
-      </button>
-    </div>
-  </motion.div>
-);
-
-const TopicModal = ({ topic, onClose, isBookmarked, isCompleted, onToggleBookmark, onToggleComplete }) => (
-  <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-    <motion.div 
-      initial={{ opacity: 0 }} 
-      animate={{ opacity: 1 }} 
-      exit={{ opacity: 0 }}
-      onClick={onClose}
-      className="absolute inset-0 bg-black/80 backdrop-blur-xl"
-    />
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9, y: 20 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.9, y: 20 }}
-      className="relative w-full max-w-2xl bg-[var(--eu-bg-void)] border border-[var(--eu-glass-border)] rounded-[40px] shadow-neon-strong p-8 md:p-12 overflow-y-auto max-h-[90vh] custom-scrollbar"
-    >
-      <div className="flex items-center justify-between gap-4 mb-8">
-        <div className="flex items-center gap-3">
-          <span className="px-4 py-1.5 bg-eu-accent/10 border border-eu-accent/20 rounded-full text-[9px] font-black uppercase tracking-widest text-eu-accent">
-            {topic.category}
-          </span>
-          {isCompleted && (
-            <div className="flex items-center gap-2 px-4 py-1.5 bg-green-500/10 border border-green-500/20 rounded-full text-[9px] font-black uppercase tracking-widest text-green-500">
-               <CheckCircle size={12} /> Mastered
+        {/* Modal Header */}
+        <div className="flex items-start justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="px-2.5 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 text-xs font-bold font-mono">
+                {topic.category}
+              </span>
+              {isCompleted && (
+                <span className="px-2.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-1">
+                  <CheckCircle size={12} /> Mastered
+                </span>
+              )}
             </div>
-          )}
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white font-outfit pt-1">
+              {topic.title}
+            </h2>
+          </div>
+          <button 
+            onClick={onClose} 
+            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-all shrink-0"
+          >
+            <X size={18} />
+          </button>
         </div>
-        <button onClick={onClose} className="p-3 bg-white/5 hover:bg-white/10 rounded-full transition-all">
-          <X size={20} className="text-slate-500" />
-        </button>
-      </div>
 
-      <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tight-mega mb-6 leading-tight">
-        {topic.title}
-      </h2>
-
-      <div className="prose prose-invert max-w-none">
-        <p className="text-base text-slate-300 leading-relaxed mb-8">
+        {/* Description */}
+        <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
           {topic.description}
         </p>
 
-        <div className="space-y-6">
-          <section>
-            <div className="flex items-center gap-2 mb-3 text-eu-accent">
-              <Code size={16} /> 
-              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Neural Sequence</span>
+        {/* Code Example */}
+        {topic.example && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300 font-outfit">
+              <span className="flex items-center gap-1.5">
+                <Code size={13} className="text-indigo-600 dark:text-indigo-400" /> Code Example
+              </span>
+              <button
+                onClick={handleCopy}
+                className="flex items-center gap-1 text-[11px] text-slate-500 hover:text-indigo-600 transition-colors"
+              >
+                {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                <span>{copied ? 'Copied' : 'Copy'}</span>
+              </button>
             </div>
-            <div className="bg-black/80 rounded-3xl p-6 border border-white/5 font-mono text-sm leading-relaxed overflow-x-auto">
-              <pre className="text-indigo-400">{topic.example}</pre>
-            </div>
-          </section>
-
-          <section>
-            <div className="flex items-center gap-2 mb-3 text-eu-accent">
-              <Activity size={16} /> 
-              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Repair Protocol</span>
-            </div>
-            <div className="p-6 bg-white/5 rounded-3xl border border-white/5">
-              <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-line">
-                {topic.solution}
-              </p>
-            </div>
-          </section>
-
-          <div className="p-6 bg-eu-accent/10 border border-eu-accent/30 rounded-3xl flex gap-4">
-            <div className="size-10 bg-eu-accent text-white rounded-2xl flex items-center justify-center shrink-0 shadow-neon">
-              <Lightbulb size={20} />
-            </div>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-eu-accent mb-1">Tactical Tip</p>
-              <p className="text-xs font-bold text-white leading-relaxed">{topic.tip}</p>
+            <div className="bg-slate-950 text-indigo-200 rounded-2xl p-4 font-mono text-xs overflow-x-auto border border-slate-800 leading-relaxed">
+              <pre>{topic.example}</pre>
             </div>
           </div>
-        </div>
-      </div>
+        )}
 
-      <div className="flex items-center gap-4 mt-12 pt-8 border-t border-white/5">
-         <button 
-           onClick={onToggleComplete}
-           className={`flex-1 flex items-center justify-center gap-3 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-neon ${isCompleted ? 'bg-green-600 text-white' : 'bg-eu-accent text-white'}`}
-         >
-           {isCompleted ? <CheckCircle size={18} /> : <Zap size={18} />}
-           {isCompleted ? 'Training Complete' : 'Mark as Mastered'}
-         </button>
-         <button 
-           onClick={onToggleBookmark}
-           className={`size-14 rounded-2xl flex items-center justify-center transition-all border ${isBookmarked ? 'bg-eu-accent/10 border-eu-accent/30 text-eu-accent' : 'bg-white/5 border-white/10 text-slate-500'}`}
-         >
-           <Star size={20} fill={isBookmarked ? "currentColor" : "none"} />
-         </button>
-      </div>
-    </motion.div>
-  </div>
-);
+        {/* Solution */}
+        {topic.solution && (
+          <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/80 space-y-1.5">
+            <div className="flex items-center gap-1.5 text-emerald-800 dark:text-emerald-300 text-xs font-bold uppercase tracking-wider font-outfit">
+              <CheckCircle size={14} /> Recommended Fix
+            </div>
+            <p className="text-xs sm:text-sm text-emerald-900 dark:text-emerald-200 leading-relaxed whitespace-pre-line font-medium">
+              {topic.solution}
+            </p>
+          </div>
+        )}
+
+        {/* Tip */}
+        {topic.tip && (
+          <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/80 flex items-start gap-3">
+            <Lightbulb size={18} className="text-amber-500 shrink-0 mt-0.5" />
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300 font-outfit block">
+                Pro Tip
+              </span>
+              <p className="text-xs text-amber-900 dark:text-amber-200 leading-relaxed mt-0.5 font-medium">
+                {topic.tip}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Footer actions */}
+        <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-800 gap-3">
+          <button
+            onClick={onToggleBookmark}
+            className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+              isBookmarked 
+                ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300' 
+                : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+            }`}
+          >
+            <Star size={14} fill={isBookmarked ? 'currentColor' : 'none'} />
+            <span>{isBookmarked ? 'Bookmarked' : 'Bookmark'}</span>
+          </button>
+
+          <button
+            onClick={() => {
+              onToggleComplete();
+              onClose();
+            }}
+            className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-sm transition-all ${
+              isCompleted 
+                ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200 hover:bg-slate-200' 
+                : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+            }`}
+          >
+            <CheckCircle size={15} />
+            <span>{isCompleted ? 'Mark as Incomplete' : 'Mark as Mastered'}</span>
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
 
 export default LearningHubPage;

@@ -1,201 +1,239 @@
-import { API_URL, SOCKET_URL } from '../config/api';
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Calendar, Clock, Zap, Activity, Globe, Loader2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { X, Calendar, Clock, Zap, Globe, Loader2, ShieldCheck, Check } from 'lucide-react';
 import axios from 'axios';
+import { API_URL } from '../config/api';
 
 const AddJobModal = ({ isOpen, onClose, initialUrl = '', setAlert }) => {
-    const [url, setUrl] = useState(initialUrl);
-    const [loading, setLoading] = useState(false);
-    const [schedule, setSchedule] = useState({
-        scanType: 'quick',
-        mode: 'one-time',
-        date: new Date().toISOString().split('T')[0],
-        time: '12:00',
-        dayOfWeek: 1
-    });
+  const [url, setUrl] = useState(initialUrl);
+  const [loading, setLoading] = useState(false);
+  const [schedule, setSchedule] = useState({
+    scanType: 'quick',
+    mode: 'one-time',
+    date: new Date().toISOString().split('T')[0],
+    time: '12:00',
+    dayOfWeek: 1
+  });
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!url) return;
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!url.trim()) return;
 
-        // Auto-normalize URL (Add protocol if missing)
-        let normalizedUrl = url.trim();
-        if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
-            normalizedUrl = `https://${normalizedUrl}`;
-        }
+    // Auto-normalize URL (Add protocol if missing)
+    let normalizedUrl = url.trim();
+    if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
+      normalizedUrl = `https://${normalizedUrl}`;
+    }
 
-        setLoading(true);
-        try {
-            const userId = localStorage.getItem('userId');
-            await axios.post(`${API_URL}/api/scheduling/jobs`, {
-                ...schedule,
-                url: normalizedUrl,
-                userId
-            });
-            setAlert({ type: 'success', message: 'Scheduling protocol established.' });
-            onClose();
-        } catch (err) {
-            setAlert({ type: 'error', message: 'Uplink failed: Registration rejected.' });
-        } finally {
-            setLoading(false);
-        }
-    };
+    setLoading(true);
+    try {
+      const userId = localStorage.getItem('userId');
+      await axios.post(`${API_URL}/api/scheduling/jobs`, {
+        ...schedule,
+        url: normalizedUrl,
+        userId
+      });
+      if (setAlert) setAlert({ type: 'success', message: 'Automated audit schedule created!' });
+      onClose();
+    } catch (err) {
+      if (setAlert) setAlert({ type: 'error', message: 'Failed to create schedule. Please check the target URL.' });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    if (!isOpen) return null;
+  if (!isOpen) return null;
 
-    return (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-            <motion.div 
-                initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                className="w-full max-w-2xl glass-euphoria border border-[var(--eu-glass-border)] rounded-[40px] overflow-hidden shadow-2xl"
-            >
-                <div className="p-8 sm:p-10 space-y-8">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className="size-12 bg-eu-accent/10 rounded-2xl flex items-center justify-center border border-eu-accent/20">
-                                <Calendar className="text-eu-accent" size={20} />
-                            </div>
-                            <div>
-                                <h2 className="text-2xl font-black uppercase tracking-tight text-white font-outfit">Initialize Schedule</h2>
-                                <p className="text-[10px] font-black text-muted uppercase tracking-widest mt-1">Status: Ready for Target Acquisition</p>
-                            </div>
-                        </div>
-                        <button onClick={onClose} className="size-10 bg-white/5 hover:bg-white/10 rounded-xl flex items-center justify-center text-muted transition-all">
-                            <X size={18} />
-                        </button>
-                    </div>
-
-                    <form onSubmit={handleSubmit} className="space-y-8">
-                        {/* URL Target */}
-                        <div className="relative group">
-                            <Globe size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-eu-accent transition-colors" />
-                            <input 
-                                type="text"
-                                value={url}
-                                onChange={(e) => setUrl(e.target.value)}
-                                placeholder="Target Infrastructure URL (https://...)"
-                                className="w-full bg-[var(--eu-bg-void)] border border-[var(--eu-glass-border)] rounded-2xl pl-14 pr-6 py-4 text-sm font-bold text-white outline-none focus:border-eu-accent/50 transition-all font-outfit"
-                                required
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                            {/* Left Column: Diagnostics */}
-                            <div className="space-y-6">
-                                <div>
-                                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted mb-4 border-b border-white/5 pb-2">Diagnostic Profile</h4>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        {['quick', 'full'].map(t => (
-                                            <button
-                                                key={t}
-                                                type="button"
-                                                onClick={() => setSchedule({...schedule, scanType: t})}
-                                                className={`py-3 px-4 rounded-xl border transition-all text-left ${
-                                                schedule.scanType === t 
-                                                    ? 'bg-primary/20 border-primary/40 text-primary shadow-neon-small scale-[1.02]' 
-                                                    : 'bg-black/20 border-white/5 text-muted hover:border-white/10'
-                                                }`}
-                                            >
-                                                <div className="text-[10px] font-black uppercase tracking-widest">{t === 'quick' ? 'Pulse' : 'Audit'}</div>
-                                                <div className="text-[8px] opacity-40 uppercase tracking-tighter mt-0.5">{t === 'quick' ? 'Fast Scrutiny' : 'Deep Neural Forge'}</div>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted mb-4 border-b border-white/5 pb-2">Temporal Cycle</h4>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {['one-time', 'daily', 'weekly'].map(m => (
-                                            <button
-                                                key={m}
-                                                type="button"
-                                                onClick={() => setSchedule({...schedule, mode: m})}
-                                                className={`py-2 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all ${
-                                                schedule.mode === m 
-                                                    ? 'bg-eu-accent/20 border-eu-accent/40 text-eu-accent shadow-neon-small' 
-                                                    : 'bg-black/20 border-white/5 text-muted'
-                                                }`}
-                                            >
-                                                {m}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Right Column: Windows */}
-                            <div className="space-y-6">
-                                <div>
-                                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted mb-4 border-b border-white/5 pb-2">Execution window</h4>
-                                    <div className="space-y-4">
-                                        <div className="space-y-2">
-                                            <label className="text-[8px] font-black text-muted uppercase tracking-widest flex items-center gap-2">
-                                                <Clock size={10} /> Time UTC+5:30
-                                            </label>
-                                            <input 
-                                                type="time" 
-                                                className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-eu-accent/50 font-mono"
-                                                value={schedule.time}
-                                                onChange={(e) => setSchedule({...schedule, time: e.target.value})}
-                                            />
-                                        </div>
-
-                                        {schedule.mode === 'one-time' && (
-                                            <div className="space-y-2">
-                                                <label className="text-[8px] font-black text-muted uppercase tracking-widest flex items-center gap-2">
-                                                    <Calendar size={10} /> Calendar Target
-                                                </label>
-                                                <input 
-                                                    type="date" 
-                                                    className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-eu-accent/50 font-mono"
-                                                    value={schedule.date}
-                                                    onChange={(e) => setSchedule({...schedule, date: e.target.value})}
-                                                />
-                                            </div>
-                                        )}
-
-                                        {schedule.mode === 'weekly' && (
-                                            <div className="space-y-2">
-                                                <label className="text-[8px] font-black text-muted uppercase tracking-widest flex items-center gap-2">
-                                                    <Activity size={10} /> Recurrence Day
-                                                </label>
-                                                <select 
-                                                    className="w-full bg-black/40 border border-white/5 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-eu-accent/50 appearance-none cursor-pointer"
-                                                    value={schedule.dayOfWeek}
-                                                    onChange={(e) => setSchedule({...schedule, dayOfWeek: parseInt(e.target.value)})}
-                                                >
-                                                    {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((d, i) => (
-                                                        <option key={d} value={i} className="bg-[#0a0a0c]">{d}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <button 
-                            type="submit"
-                            disabled={loading || !url}
-                            className="w-full py-5 bg-eu-accent text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] shadow-neon hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:grayscale disabled:scale-100 flex items-center justify-center gap-3"
-                        >
-                            {loading ? <Loader2 className="animate-spin" size={18} /> : (
-                                <>
-                                    <Zap size={16} />
-                                    Authorize Scheduling Protocol
-                                </>
-                            )}
-                        </button>
-                    </form>
-                </div>
-            </motion.div>
+  return (
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-900/60 dark:bg-black/80 backdrop-blur-xs font-inter">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95, y: 15 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 15 }}
+        className="w-full max-w-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden p-6 sm:p-8 space-y-6"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800">
+          <div className="flex items-center gap-3.5">
+            <div className="size-11 rounded-2xl bg-indigo-50 dark:bg-indigo-950/80 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+              <Calendar size={20} />
+            </div>
+            <div>
+              <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white font-outfit">
+                Schedule Automated Audit
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Set up recurring automated scans and regression checks
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={onClose} 
+            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-all"
+          >
+            <X size={18} />
+          </button>
         </div>
-    );
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* URL Input */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 font-outfit flex items-center gap-1.5">
+              <Globe size={13} className="text-indigo-600 dark:text-indigo-400" /> Target Website URL
+            </label>
+            <input 
+              type="text"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://example.com"
+              className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 text-xs sm:text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              required
+              autoFocus
+            />
+          </div>
+
+          {/* Diagnostic Profile */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 font-outfit">
+              Audit Strategy
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { id: 'quick', title: 'Quick Pulse', desc: 'Core Web Vitals & critical links (~15s)' },
+                { id: 'full', title: 'Full Deep Audit', desc: 'All 8 sensors + multi-page crawler' },
+              ].map(t => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setSchedule({ ...schedule, scanType: t.id })}
+                  className={`p-3 rounded-xl border text-left transition-all ${
+                    schedule.scanType === t.id 
+                      ? 'bg-indigo-50/70 border-indigo-500 dark:bg-indigo-950/60 dark:border-indigo-600 shadow-xs' 
+                      : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-900 dark:text-white">{t.title}</span>
+                    {schedule.scanType === t.id && (
+                      <span className="size-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px]">
+                        <Check size={10} strokeWidth={3} />
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 block leading-tight">
+                    {t.desc}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Frequency & Windows */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Frequency */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 font-outfit">
+                Frequency
+              </label>
+              <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+                {[
+                  { id: 'one-time', label: 'Once' },
+                  { id: 'daily', label: 'Daily' },
+                  { id: 'weekly', label: 'Weekly' },
+                ].map(m => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setSchedule({ ...schedule, mode: m.id })}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      schedule.mode === m.id 
+                        ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 shadow-xs' 
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Time Picker */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 font-outfit flex items-center gap-1.5">
+                <Clock size={12} className="text-indigo-600 dark:text-indigo-400" /> Execution Time
+              </label>
+              <input 
+                type="time" 
+                className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500/50"
+                value={schedule.time}
+                onChange={(e) => setSchedule({ ...schedule, time: e.target.value })}
+              />
+            </div>
+          </div>
+
+          {/* Conditional Date or Day of Week */}
+          {schedule.mode === 'one-time' && (
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 font-outfit flex items-center gap-1.5">
+                <Calendar size={12} className="text-indigo-600 dark:text-indigo-400" /> Execution Date
+              </label>
+              <input 
+                type="date" 
+                className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500/50"
+                value={schedule.date}
+                min={new Date().toISOString().split('T')[0]}
+                onChange={(e) => setSchedule({ ...schedule, date: e.target.value })}
+              />
+            </div>
+          )}
+
+          {schedule.mode === 'weekly' && (
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 font-outfit">
+                Day of Week
+              </label>
+              <div className="grid grid-cols-7 gap-1.5">
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d, idx) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setSchedule({ ...schedule, dayOfWeek: idx })}
+                    className={`py-2 rounded-xl text-xs font-bold transition-all ${
+                      schedule.dayOfWeek === idx 
+                        ? 'bg-indigo-600 text-white shadow-xs' 
+                        : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+                    }`}
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading || !url.trim()}
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-sm transition-all disabled:opacity-40"
+            >
+              {loading ? <Loader2 size={15} className="animate-spin" /> : <Calendar size={15} />}
+              <span>{loading ? 'Registering...' : 'Schedule Audit'}</span>
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
+  );
 };
 
 export default AddJobModal;

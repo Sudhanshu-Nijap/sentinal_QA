@@ -284,10 +284,16 @@ const ChatInterface = ({
     }
   }, [pendingMessage, activeChatId, pendingReportId]);
 
-  const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToBottom = () => {
+    if (activeView === 'qa' || activeView === 'chat') {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, isTyping]);
+    if (activeView === 'qa' || activeView === 'chat') {
+      scrollToBottom();
+    }
+  }, [messages, isTyping, activeView]);
 
   // Track in-progress scan via Socket
   useEffect(() => {
@@ -577,8 +583,8 @@ const ChatInterface = ({
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm relative font-inter overflow-hidden">
-      {/* ── Header ── */}
-      {!isScheduleView && (
+      {/* ── Header (Only for Chat / QA Sessions) ── */}
+      {(activeView === 'qa' || activeView === 'chat') && (
         <div className="px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center gap-3 bg-slate-50/70 dark:bg-slate-900/70 z-10">
           <div className="p-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center shadow-sm">
             <Bot size={18} className="text-indigo-600 dark:text-indigo-400" />
@@ -649,23 +655,24 @@ const ChatInterface = ({
         )}
       </AnimatePresence>
 
-
-
-      {/* ── Messages / Dashboard Views ── */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 pb-24 space-y-4 custom-scrollbar bg-slate-50/50 dark:bg-slate-950">
-        {activeView === 'schedule' ? (
+      {/* ── Dashboard Views (Schedule & Learn) ── */}
+      {activeView === 'schedule' ? (
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 custom-scrollbar bg-slate-50/50 dark:bg-slate-950">
           <SchedulingDashboard setAlert={setAlert} confirm={confirm} />
-        ) : activeView === 'learn' ? (
-          <div className="pt-10 h-full">
-            <LearningHubPage />
-          </div>
-        ) : loading ? (
-          <div className="flex items-center justify-center h-full">
-            <Loader2 className="animate-spin text-indigo-600 dark:text-indigo-400" size={24} />
-          </div>
-        ) : messages.length === 0 && !activeChatId ? (
-          <WelcomeHero />
-        ) : (
+        </div>
+      ) : activeView === 'learn' ? (
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 custom-scrollbar bg-slate-50/50 dark:bg-slate-950">
+          <LearningHubPage />
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 pb-24 space-y-4 custom-scrollbar bg-slate-50/50 dark:bg-slate-950">
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <Loader2 className="animate-spin text-indigo-600 dark:text-indigo-400" size={24} />
+            </div>
+          ) : messages.length === 0 && !activeChatId ? (
+            <WelcomeHero />
+          ) : (
           <AnimatePresence initial={false}>
             {grouped.map((item, i) => {
               if (item.type === 'separator') {
@@ -895,7 +902,8 @@ const ChatInterface = ({
           </div>
         )}
         <div ref={messagesEndRef} />
-      </div>
+        </div>
+      )}
 
       {/* ── Footer / Input ── */}
       {(activeView === 'qa' || activeView === 'chat') && (
