@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Send, Bot, User, Shield, Activity,
+  Send, Bot, User, Shield, Activity, Globe, AlertTriangle,
   RefreshCw, ChevronDown, Check, Loader2, ChevronUp, Lock,
   FormInput, Layout, ExternalLink, UserCheck, Wifi, Zap, Terminal
 } from 'lucide-react';
