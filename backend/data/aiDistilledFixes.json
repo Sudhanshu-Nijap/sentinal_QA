@@ -112,5 +112,11 @@
     "fixSummary": "**Critical Finding: Multiple 403 Errors**\n\n**Root Cause:**\nThe root cause of the multiple 403 errors is the server's inability to access or process the requested resources. This could be due to various reasons such as:\n\n* Insufficient permissions or access rights to the requested resources.\n* Incorrect or missing authentication credentials.\n* Server-side configuration issues, such as incorrect file permissions or directory settings.\n* Third-party integration issues, such as incorrect API keys or",
     "timestamp": "2026-04-17T07:42:45.105Z",
     "status": "pending-review"
+  },
+  {
+    "query": "the issues it is finding all are image issues then 404 it is saying but that are plugins so how that aare issues and also the explanation is not that good unable to understand the issue",
+    "fixSummary": "Hello! I am **Sentinel AI**, your Principal QA Lead and Web Architect. I completely understand your confusion—seeing a list of errors about plugins or images can feel confusing, especially when the site seems to load fine on the surface. \n\nLet me break down these exact issues in very simple, plain English so you can see why our audit flagged them and how we can easily fix them together.\n\n---\n\n### 1. What's going on with the \"Plugin 404 Errors\"?\n\nYou noticed errors like this popping up across you",
+    "timestamp": "2026-10-15T04:51:33.649Z",
+    "status": "pending-review"
   }
 ]

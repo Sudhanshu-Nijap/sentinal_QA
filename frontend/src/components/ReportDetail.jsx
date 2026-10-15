@@ -1312,6 +1312,10 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
 
   const calculateHealth = () => {
     if (!report) return 100;
+    // Prioritize canonical healthScore calculated by the backend scoring engine
+    if (typeof report.healthScore === 'number' && !isNaN(report.healthScore)) {
+      return Math.round(report.healthScore);
+    }
     const weights = {
       network: 0.5,
       links: 10,
@@ -1323,7 +1327,6 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
     };
     const deductions = tabs.reduce((acc, curr) => {
       const weight = weights[curr.id] || 0;
-      // FIX: Ensure curr.count is numeric before multiplication to avoid NaN
       const count = curr.count || 0;
       return acc + (count * weight);
     }, 0);
