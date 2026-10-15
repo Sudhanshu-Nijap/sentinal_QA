@@ -67,6 +67,17 @@ const scanReportSchema = new mongoose.Schema({
         links: [{ source: String, target: String }]
     },
     healthScore: { type: Number, default: 0 },
+    stats: {
+        totalIssues: { type: Number, default: 0 },
+        networkIssues: { type: Number, default: 0 },
+        securityIssues: { type: Number, default: 0 },
+        uiIssues: { type: Number, default: 0 },
+        formIssues: { type: Number, default: 0 },
+        consoleErrors: { type: Number, default: 0 },
+        brokenLinks: { type: Number, default: 0 },
+        accessibilityIssues: { type: Number, default: 0 },
+        pagesCrawled: { type: Number, default: 1 }
+    },
     isPinned: { type: Boolean, default: false },
     isShared: { type: Boolean, default: false },
     isArchived: { type: Boolean, default: false },

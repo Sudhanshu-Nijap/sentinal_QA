@@ -94,8 +94,9 @@ router.post('/scan', async (req, res) => {
     }
 
     try {
+        const resolvedScope = singlePageOnly ? 'single' : (scope || 'site');
         // Run scan fully async — returns reportId immediately to the client
-        const { reportId, isCached, threat } = await startScan(url, userId, force, 'standard', singlePageOnly, tests, scope, mode, chatId);
+        const { reportId, isCached, threat } = await startScan(url, userId, force, 'standard', singlePageOnly, tests, resolvedScope, mode, chatId);
 
         if (threat) {
             return res.status(403).json({ 
@@ -379,7 +380,7 @@ const calculateReportHealth = (report) => {
  * startScan - Initiates the background scan process.
  * Separated from runFullScan for cleaner async handling.
  */
-async function startScan(baseUrl, userId, force = false, chaosIntensity = 'standard', singlePageOnly = false, tests = [], scope = 'single', mode = 'specific', chatId = null) {
+async function startScan(baseUrl, userId, force = false, chaosIntensity = 'standard', singlePageOnly = false, tests = [], scope = 'site', mode = 'specific', chatId = null) {
     // ── Pre-Scan Security Gate (PRIORITY #1) ──
     const securityCheck = linkGuardian.analyze(baseUrl);
     if (securityCheck.isMalicious) {
@@ -425,17 +426,16 @@ async function startScan(baseUrl, userId, force = false, chaosIntensity = 'stand
         }
     }
 
-    const defaultModules = ['console', 'network', 'lighthouse', 'accessibility', 'links', 'ui', 'forms'];
+    const defaultModules = ['console', 'network', 'lighthouse', 'accessibility', 'links', 'ui', 'forms', 'security'];
     let finalModules = defaultModules;
 
-    if (Array.isArray(tests)) {
+    if (Array.isArray(tests) && tests.length > 0) {
         finalModules = tests;
     } else if (typeof tests === 'string' && tests.length > 0) {
         try {
             const parsed = JSON.parse(tests);
-            if (Array.isArray(parsed)) finalModules = parsed;
+            if (Array.isArray(parsed) && parsed.length > 0) finalModules = parsed;
         } catch (_) {
-            // If it's a string like "site" or "full", we use defaults as it's not a module list
             finalModules = defaultModules;
         }
     }
@@ -475,7 +475,7 @@ async function startScan(baseUrl, userId, force = false, chaosIntensity = 'stand
     }
 
     // Launch background processor
-    runFullScan(report._id, baseUrl, chaosIntensity, singlePageOnly, finalModules, scope, mode, chatId, previousReport?._id).catch(e => {
+    runFullScan(report._id, baseUrl, userId, chaosIntensity, singlePageOnly, finalModules, scope, mode, chatId, previousReport?._id).catch(e => {
         console.error(`[Pipeline Critical Failure]: ${e.message}`);
     });
 
@@ -493,14 +493,14 @@ const withTimeout = (promise, ms, taskName) => {
 /**
  * runFullScan - Spawns a background worker thread for the pipeline.
  */
-async function runFullScan(reportId, baseUrl, chaosIntensity, singlePageOnly = false, tests = [], scope = 'single', mode = 'specific', chatId = null, prevReportId = null) {
+async function runFullScan(reportId, baseUrl, userId, chaosIntensity, singlePageOnly = false, tests = [], scope = 'site', mode = 'specific', chatId = null, prevReportId = null) {
     const { Worker } = require('worker_threads');
     const path = require('path');
 
     console.log(`[Main]: Spawning Tactical Worker for ${reportId} with baseline ${prevReportId}...`);
 
     const worker = new Worker(path.join(__dirname, '../workers/scanWorker.js'), {
-        workerData: { reportId: reportId.toString(), baseUrl, chaosIntensity, singlePageOnly, tests, scope, mode, chatId: chatId ? chatId.toString() : null, prevReportId: prevReportId?.toString() }
+        workerData: { reportId: reportId.toString(), baseUrl, userId, chaosIntensity, singlePageOnly, tests, scope, mode, chatId: chatId ? chatId.toString() : null, prevReportId: prevReportId?.toString() }
     });
 
     console.log(`[Worker Lifecycle]: Spawned background process for Report ${reportId} (Thread ID: ${worker.threadId || 'Main Inheritance'})`);
@@ -510,13 +510,20 @@ async function runFullScan(reportId, baseUrl, chaosIntensity, singlePageOnly = f
     worker.on('message', (msg) => {
         if (msg.type === 'progress') {
             console.log(`[Worker Lifecycle]: Progress Update [Report: ${reportId}] -> ${msg.percent}%: ${msg.stage}`);
+            const progressData = {
+                reportId: reportId.toString(),
+                percent: msg.percent,
+                stage: msg.stage,
+                pagesCrawled: msg.pagesCrawled || 0,
+                currentUrl: msg.currentUrl || null,
+                issuesFound: msg.issuesFound || 0,
+                status: 'in-progress'
+            };
             if (global.io) {
-                global.io.to(reportId.toString()).emit('scan-progress', {
-                    reportId: reportId.toString(),
-                    percent: msg.percent,
-                    stage: msg.stage,
-                    status: 'in-progress'
-                });
+                global.io.to(reportId.toString()).emit('scan-progress', progressData);
+                if (userId) {
+                    global.io.to(`user_${userId}`).emit('scan-progress', progressData);
+                }
             }
         }
         if (msg.type === 'new-message') {

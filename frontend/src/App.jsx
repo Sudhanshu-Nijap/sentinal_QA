@@ -2,14 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, Shield, Bug, Activity, Command, Cpu, Zap, Skull, X, Calendar, Bot, Sun, Moon } from 'lucide-react';
+import { ShieldCheck, Shield, Bug, Activity, Command, Cpu, Zap, Skull, X, Calendar, Bot, Sun, Moon, Globe, Loader2 } from 'lucide-react';
 import axios from 'axios';
 
 import ScanForm from './components/ScanForm';
 import ReportDashboard from './components/ReportDashboard';
 import BentoDashboard from './components/BentoDashboard';
 import ReportDetail from './components/ReportDetail';
-import GlobalIntelligence from './components/GlobalIntelligence';
 import AuthModal from './components/AuthModal';
 import HowItWorks from './components/HowItWorks';
 import AboutUs from './components/AboutUs';
@@ -438,7 +437,6 @@ function App() {
             <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 md:gap-2">
               {[
                 { id: 'qa', label: 'Chat', icon: <Bot size={15} />, title: 'AI Assistant' },
-                { id: 'analyze', label: 'Analyze', icon: <Activity size={15} />, title: 'Intelligence Dashboard' },
                 { id: 'learn', label: 'Learn', icon: <Cpu size={15} />, title: 'Knowledge Base' },
                 { id: 'schedule', label: 'Schedule', icon: <Calendar size={15} />, title: 'Automated Audits' },
               ].map(v => (
@@ -602,7 +600,7 @@ function App() {
                   onToggleTheme={toggleTheme}
                   theme={theme}
                   onGroupChart={() => {
-                    setActiveView('analyze');
+                    setActiveView('qa');
                     setViewingReportId(null);
                     setIsSidebarOpen(false);
                   }}
@@ -693,66 +691,83 @@ function App() {
         </AnimatePresence>
       </main>
 
-      {/* Global Progress Bar (Sticky) */}
+      {/* Global Crawling & Audit Progress HUD (Sticky) */}
       <AnimatePresence>
-        {isLoggedIn && scanProgress && (
+        {scanProgress && (
           <motion.div
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-2xl z-[100] p-[1px] bg-gradient-to-r from-eu-accent/50 via-white/10 to-transparent rounded-[20px] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)]"
+            initial={{ y: 100, opacity: 0, scale: 0.95 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: 100, opacity: 0, scale: 0.95 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-2xl z-[100] p-[1.5px] bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-400 rounded-[24px] shadow-[0_20px_50px_rgba(0,0,0,0.4)]"
           >
-            <div className="bg-[var(--eu-bg-card)] p-5 rounded-[19px] border border-[var(--eu-glass-border)]">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-4">
-                  <div className="size-11 bg-eu-accent/10 rounded-xl flex items-center justify-center border border-eu-accent/20 relative group">
-                    <div className="absolute inset-0 bg-eu-accent/20 blur-lg rounded-full animate-pulse group-hover:bg-eu-accent/40 transition-all" />
-                    <Activity size={18} className="text-eu-accent animate-[pulse_2s_infinite] relative" />
+            <div className="bg-slate-900/95 backdrop-blur-xl p-4 sm:p-5 rounded-[23px] border border-white/10 text-white">
+              <div className="flex items-center justify-between mb-3.5">
+                <div className="flex items-center gap-3.5 min-w-0">
+                  {/* High-Tech Animated Radar Crawler Loading Icon */}
+                  <div className="relative size-11 rounded-2xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center shrink-0">
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 2.5, repeat: Infinity, ease: 'linear' }}
+                      className="absolute inset-1 rounded-xl border border-indigo-400 border-t-transparent"
+                    />
+                    <motion.div
+                      animate={{ scale: [1, 1.25, 1], opacity: [0.6, 1, 0.6] }}
+                      transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                      className="size-3.5 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,1)]"
+                    />
+                    <Globe size={16} className="text-white relative z-10" />
                   </div>
-                  <div>
-                    <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-white/90 font-outfit">Neural Substrate Scan</h4>
-                    <p className="text-[10px] font-bold text-eu-accent/80 uppercase tracking-tighter mt-1 flex items-center gap-2">
-                      <span className="inline-block size-1 bg-eu-accent rounded-full animate-ping" />
-                      {scanProgress.stage}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-[11px] font-black uppercase tracking-[0.18em] text-indigo-300 font-outfit flex items-center gap-1.5">
+                        <span className="inline-block size-1.5 bg-emerald-400 rounded-full animate-ping" />
+                        Parallel Worker Crawler
+                      </h4>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-white/80 font-bold">
+                        {scanProgress.pagesCrawled || 1} Pages • {scanProgress.issuesFound || 0} Issues
+                      </span>
+                    </div>
+                    <p className="text-[11px] font-bold text-white/90 truncate mt-1 flex items-center gap-1.5">
+                      <Loader2 size={11} className="animate-spin text-indigo-400 shrink-0" />
+                      <span className="truncate">{scanProgress.stage || 'Crawling site pages & detecting issues...'}</span>
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-4 shrink-0 pl-2">
                   <div className="text-right">
-                    <div className="text-lg font-black font-mono text-white tracking-tighter leading-none">{scanProgress.percent}%</div>
-                    <div className="text-[8px] font-black text-slate-500 uppercase tracking-widest mt-1">Completion</div>
+                    <div className="text-lg font-black font-mono text-cyan-400 tracking-tight leading-none">
+                      {scanProgress.percent || 15}%
+                    </div>
+                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">Status: Active</div>
                   </div>
 
                   <button
                     onClick={() => {
                       setScanProgress(null);
                       localStorage.removeItem('sentinel_pending_progress');
-                      window.location.reload();
                     }}
-                    className="size-8 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl flex items-center justify-center text-white/40 hover:text-white transition-all shadow-sm"
-                    title="Dismiss Progress Monitor"
+                    className="size-8 bg-white/5 hover:bg-white/15 border border-white/10 rounded-xl flex items-center justify-center text-white/50 hover:text-white transition-all shadow-sm"
+                    title="Dismiss HUD"
                   >
                     <X size={14} />
                   </button>
                 </div>
               </div>
 
-              <div className="relative w-full h-2.5 bg-black/40 rounded-full overflow-hidden p-[1px] border border-white/10 shadow-inner">
+              {/* Dynamic Animated Progress Bar */}
+              <div className="relative w-full h-2 bg-black/60 rounded-full overflow-hidden p-[1px] border border-white/10">
                 <motion.div
-                  className="h-full rounded-full bg-gradient-to-r from-eu-accent via-violet-500 to-cyan-400 relative"
-                  initial={{ width: '0%' }}
-                  animate={{ width: `${scanProgress.percent}%` }}
-                  transition={{ duration: 0.8, ease: "circOut" }}
+                  className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-400 relative"
+                  initial={{ width: '15%' }}
+                  animate={{ width: `${Math.max(15, scanProgress.percent || 15)}%` }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
                 >
-                  {/* Premium Shimmer Effect */}
                   <motion.div
                     animate={{ x: ['-100%', '200%'] }}
                     transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent w-full h-full"
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent w-full h-full"
                   />
-                  {/* Subtle Glow */}
-                  <div className="absolute inset-0 shadow-[0_0_15px_rgba(var(--eu-accent-rgb),0.5)]" />
                 </motion.div>
               </div>
             </div>

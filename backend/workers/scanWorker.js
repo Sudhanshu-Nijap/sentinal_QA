@@ -114,16 +114,25 @@ async function runMasterOrchestrator(data) {
     try {
         let lighthouseMetrics = null;
 
-        const emitProgress = (percent, stage) => {
-            if (parentPort) parentPort.postMessage({ type: 'progress', percent, stage });
+        const emitProgress = (percent, stage, meta = {}) => {
+            if (parentPort) {
+                parentPort.postMessage({ 
+                    type: 'progress', 
+                    percent, 
+                    stage,
+                    pagesCrawled: meta.pagesCrawled || 0,
+                    currentUrl: meta.currentUrl || null,
+                    issuesFound: meta.issuesFound || 0
+                });
+            }
         };
 
         emitProgress(5, 'Engaging Integrated Audit Core...');
 
         if (scope === 'single') {
             console.log('[MasterWorker]: Executing Unified Session Audit (Standard Convergence)...');
-            const result = await scanEngine.runSinglePageScan(reportId, baseUrl, tests, (p, s) => {
-                emitProgress(5 + Math.round(p * 0.80), s);
+            const result = await scanEngine.runSinglePageScan(reportId, baseUrl, tests, (p, s, meta) => {
+                emitProgress(5 + Math.round(p * 0.80), s, meta || { pagesCrawled: 1, currentUrl: baseUrl });
             });
             
             if (result) {
@@ -131,8 +140,9 @@ async function runMasterOrchestrator(data) {
                 await scanEngine.persistScanData(reportId, result);
             }
         } else {
-            await scanEngine.runTargetedCrawlScan(reportId, baseUrl, tests, (p, s) => {
-                emitProgress(5 + Math.round(p * 0.80), s);
+            console.log('[MasterWorker]: Executing Multi-Worker Crawl & Issue Audit...');
+            await scanEngine.runTargetedCrawlScan(reportId, baseUrl, tests, (p, s, meta) => {
+                emitProgress(5 + Math.round(p * 0.80), s, meta);
             }, scope);
             
             const consolidatedReport = await ScanReport.findById(reportId);
@@ -183,32 +193,57 @@ async function runMasterOrchestrator(data) {
             finalSet.lighthouseScores = lighthouseMetrics;
         }
 
-        const finalReport = await ScanReport.findByIdAndUpdate(reportId, {
+        // STEP 1: First commit completed scan telemetry to the database
+        await ScanReport.findByIdAndUpdate(reportId, {
             $set: finalSet
-        }, { returnDocument: 'after' });
+        }, { new: true });
 
+        // STEP 2: Reload the fresh, fully persisted document directly from MongoDB
+        const finalReport = await ScanReport.findById(reportId).lean();
+
+        // STEP 3: Compute unified, high-accuracy sensor stats directly from the database record
+        const apiLeaksCount = (finalReport?.securityIssues || []).filter(s => 
+            s.type === 'SERVER_STACK_TRACE_LEAK' || s.type === 'SENSITIVE_API_RESPONSE_FIELD' || s.testCaseId?.includes('SEC-STACK') || s.testCaseId?.includes('SEC-DATA')
+        ).length;
+        const netFailCount = (finalReport?.networkLogs?.filter(n => n.status >= 400) || []).length;
+        const apiAndNetCount = netFailCount + apiLeaksCount;
+        const secretSecurityCount = Math.max(0, (finalReport?.securityIssues?.length || 0) - apiLeaksCount);
+        const uiCount = (finalReport?.uiIssues?.length || 0) + (finalReport?.responsiveIssues?.length || 0);
+        const formCount = finalReport?.formIssues?.length || 0;
+        const consoleCount = finalReport?.consoleErrors?.length || 0;
+        const linkCount = finalReport?.brokenLinks?.length || 0;
+        const a11yCount = finalReport?.accessibilityIssues?.length || 0;
+        const totalIssuesCount = apiAndNetCount + formCount + uiCount + secretSecurityCount + consoleCount + linkCount + a11yCount;
+
+        const reportStats = {
+            totalIssues: totalIssuesCount,
+            networkIssues: apiAndNetCount,
+            securityIssues: secretSecurityCount,
+            uiIssues: uiCount,
+            formIssues: formCount,
+            consoleErrors: consoleCount,
+            brokenLinks: linkCount,
+            accessibilityIssues: a11yCount,
+            pagesCrawled: finalReport?.pagesCrawled || 1
+        };
+
+        // STEP 4: Store exact computed stats in the database record
+        await ScanReport.findByIdAndUpdate(reportId, { $set: { stats: reportStats } });
+
+        // STEP 5: Now dispatch the chat message containing the exact database numbers
         if (chatId) {
             const isPreviousScan = !!comparison?.previousReportId;
             const msgType = isPreviousScan ? 'rescan' : 'report';
             const reportSummary = {
-                healthScore,
+                healthScore: finalReport?.healthScore ?? healthScore,
                 status: 'completed',
                 lighthouseScores: {
-                    performance: finalReport?.lighthouseScores?.performance ?? scanData?.lighthouseScores?.performance ?? 0,
-                    accessibility: finalReport?.lighthouseScores?.accessibility ?? scanData?.lighthouseScores?.accessibility ?? 0,
-                    bestPractices: finalReport?.lighthouseScores?.bestPractices ?? scanData?.lighthouseScores?.bestPractices ?? 0,
-                    seo: finalReport?.lighthouseScores?.seo ?? scanData?.lighthouseScores?.seo ?? 0
+                    performance: finalReport?.lighthouseScores?.performance ?? lighthouseMetrics?.performance ?? 0,
+                    accessibility: finalReport?.lighthouseScores?.accessibility ?? lighthouseMetrics?.accessibility ?? 0,
+                    bestPractices: finalReport?.lighthouseScores?.bestPractices ?? lighthouseMetrics?.bestPractices ?? 0,
+                    seo: finalReport?.lighthouseScores?.seo ?? lighthouseMetrics?.seo ?? 0
                 },
-                stats: {
-                    brokenLinks: finalReport?.brokenLinks?.length || 0,
-                    consoleErrors: finalReport?.consoleErrors?.length || 0,
-                    accessibilityIssues: finalReport?.accessibilityIssues?.length || 0,
-                    networkIssues: finalReport?.networkLogs?.length || 0,
-                    securityIssues: finalReport?.securityIssues?.length || 0,
-                    uiIssues: (finalReport?.uiIssues?.length || 0) + (finalReport?.responsiveIssues?.length || 0),
-                    formIssues: finalReport?.formIssues?.length || 0,
-                    pagesCrawled: finalReport?.pagesCrawled || 1
-                },
+                stats: reportStats,
                 comparison: comparison?.previousReportId ? {
                     previousReportId: comparison.previousReportId,
                     scoreDelta: comparison.scoreDelta,

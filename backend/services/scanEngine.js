@@ -455,9 +455,8 @@ const runSinglePageScan = async (reportId, url, scannedModules = [], emitProgres
             });
         }).catch(() => {});
 
-        // Wait extra time to catch delayed async exceptions like Firebase Firestore denials
-        console.log(`[scanEngine]: Awaiting extended async stabilization (8000ms)...`);
-        await page.waitForTimeout(8000);
+        // Optimized async stabilization
+        await page.waitForTimeout(800);
 
         const screenshotName = `screenshot-${Date.now()}.png`;
         const screenshotPath = path.join(__dirname, '../screenshots', screenshotName);
@@ -631,100 +630,21 @@ const runSinglePageScan = async (reportId, url, scannedModules = [], emitProgres
 };
 
 /**
- * runTargetedCrawlScan - Lean site-wide audit (converged)
+ * runTargetedCrawlScan - Ultra-fast multi-worker site-wide crawl and deep audit
  */
 const runTargetedCrawlScan = async (reportId, url, tests, emitProgress, scope = 'site') => {
-    console.log(`[scanEngine]: Initiating Converged Site Crawl: ${url} | Scope: ${scope}`);
+    console.log(`[scanEngine]: Initiating High-Throughput Worker Crawl & Audit: ${url} | Scope: ${scope}`);
     
-    const pages = await crawler.crawlWebsite(reportId, url, emitProgress, { 
+    // Leverage the unified multi-worker crawler that discovers and audits all pages in parallel
+    const auditResults = await crawler.crawlAndAuditWebsite(reportId, url, emitProgress, { 
         scope: scope,
-        maxPages: scope === 'site' ? 30 : 1, 
-        maxDepth: scope === 'site' ? 3 : 0 
+        maxPages: scope === 'site' ? 25 : 1, 
+        maxDepth: scope === 'site' ? 3 : 0,
+        tests: tests,
+        maxWorkers: 4
     });
-    
-    const auditLimit = 15;
-    const pagesToAudit = pages.slice(0, auditLimit);
-    let sessionAtlas = new Set();
-    
-    const siteLogs = {
-        consoleErrors: [],
-        networkLogs: [],
-        uiIssues: [],
-        formIssues: [],
-        securityIssues: [],
-        screenshots: [],
-        accessibilityIssues: [],
-        lighthouseScores: null,
-        metrics: { totalSize: 0, loadTime: 0, requestCount: 0 }
-    };
 
-    if (pagesToAudit.length > 0) {
-        const batchSize = 5; // Optimized for high-throughput concurrency
-        for (let i = 0; i < pagesToAudit.length; i += batchSize) {
-            const batch = pagesToAudit.slice(i, i + batchSize);
-            
-            await Promise.all(batch.map(async (pageUrl, batchIdx) => {
-                const globalIdx = i + batchIdx;
-                
-                // --- NEURAL STAGGERING (V2) ---
-                await new Promise(r => setTimeout(r, batchIdx * 600));
-                
-                const isMainPage = normalizeUrl(pageUrl) === normalizeUrl(url);
-                // LEAN AUDIT PROTOCOL: Sub-pages skip heavy modules for speed
-                const activeTests = isMainPage ? tests : tests.filter(t => !['lighthouse', 'forms', 'accessibility'].includes(t));
-                
-                const onPageProgress = (percent, message) => {
-                    const totalProgress = Math.round(((globalIdx / pagesToAudit.length) * 100) + (percent / pagesToAudit.length));
-                    emitProgress(totalProgress, `[Warp-Drive] Node ${globalIdx+1}/${pagesToAudit.length}: ${message}`);
-                };
-
-                const result = await withTimeout(
-                    runSinglePageScan(reportId, pageUrl, activeTests, onPageProgress, sessionAtlas),
-                    90000, 
-                    `Node Audit (${pageUrl})`
-                ).catch(err => {
-                    console.error(`[scanEngine]: Warp-Drive Node Failure (${pageUrl}): ${err.message}`);
-                    return null;
-                });
-
-                if (result) {
-                    siteLogs.consoleErrors.push(...result.consoleErrors);
-                    siteLogs.networkLogs.push(...result.networkLogs);
-                    siteLogs.uiIssues.push(...result.uiIssues);
-                    siteLogs.formIssues.push(...result.formIssues);
-                    siteLogs.securityIssues.push(...(result.securityIssues || []));
-                    if (result.screenshot) {
-                        siteLogs.screenshots.push(result.screenshot);
-                    }
-                    siteLogs.metrics.totalSize += result.totalSize;
-                    siteLogs.metrics.loadTime = Math.max(siteLogs.metrics.loadTime, result.loadTime);
-                    siteLogs.metrics.requestCount += result.requestCount;
-                    
-                    if (result.lighthouseScores) {
-                        siteLogs.lighthouseScores = result.lighthouseScores;
-                        siteLogs.accessibilityIssues.push(...result.accessibilityIssues);
-                    }
-                }
-            }));
-        }
-
-        const siteResults = {
-            consoleErrors: siteLogs.consoleErrors,
-            uiIssues: siteLogs.uiIssues,
-            formIssues: siteLogs.formIssues,
-            securityIssues: siteLogs.securityIssues,
-            networkLogs: siteLogs.networkLogs,
-            screenshots: siteLogs.screenshots,
-            lighthouseScores: siteLogs.lighthouseScores,
-            accessibilityIssues: siteLogs.accessibilityIssues,
-            loadTime: siteLogs.metrics.loadTime,
-            totalSize: siteLogs.metrics.totalSize,
-            requestCount: siteLogs.metrics.requestCount
-        };
-
-        await persistScanData(reportId, siteResults);
-        console.log('[scanEngine]: Multi-threaded Warp-Drive report generated.');
-    }
+    return auditResults;
 };
 
 /**
@@ -747,6 +667,8 @@ const persistScanData = async (reportId, results) => {
     const finalForms = prune(results.formIssues, f => `${f.formName}|${f.type}|${f.fieldName}`);
     const finalConsole = prune(results.consoleErrors, c => `${c.message}|${c.location}`);
     const finalSecurity = prune(results.securityIssues || [], s => `${s.issue}|${s.selector}`);
+    const finalBrokenLinks = prune(results.brokenLinks || [], b => `${b.link}|${b.page}`);
+    const finalResponsive = prune(results.responsiveIssues || [], r => `${r.issue}|${r.selector}`);
 
     await ScanReport.findByIdAndUpdate(reportId, {
         $set: {
@@ -754,6 +676,8 @@ const persistScanData = async (reportId, results) => {
             uiIssues: finalUI.slice(0, 100),
             formIssues: finalForms.slice(0, 100),
             securityIssues: finalSecurity.slice(0, 100),
+            brokenLinks: finalBrokenLinks.slice(0, 100),
+            responsiveIssues: finalResponsive.slice(0, 100),
             accessibilityIssues: (results.accessibilityIssues || []).slice(0, 100),
             lighthouseScores: results.lighthouseScores,
             networkLogs: (results.networkLogs || []).slice(0, 200),

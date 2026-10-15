@@ -11,7 +11,6 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import ScanSummaryCard from './ScanSummaryCard';
 import SchedulingDashboard from './SchedulingDashboard';
-import GlobalIntelligence from './GlobalIntelligence';
 import LearningHubPage from './LearningHub/LearningHubPage';
 import { API_URL, SOCKET_URL } from '../config/api';
 
@@ -164,8 +163,8 @@ const ChatInterface = ({
   const [latestReport, setLatestReport] = useState(null);
   const [loading, setLoading] = useState(false);
   const [scanParams, setScanParams] = useState({
-    scope: 'single',
-    mode: 'specific',
+    scope: 'site', // Default to full website crawl & deep issue discovery
+    mode: 'full',
     tests: ['console', 'network', 'forms', 'ui', 'security', 'lighthouse', 'accessibility', 'links']
   });
   const [showSensors, setShowSensors] = useState(false);
@@ -653,13 +652,9 @@ const ChatInterface = ({
 
 
       {/* ── Messages / Dashboard Views ── */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-4 custom-scrollbar bg-slate-50/50 dark:bg-slate-950">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 pb-24 space-y-4 custom-scrollbar bg-slate-50/50 dark:bg-slate-950">
         {activeView === 'schedule' ? (
           <SchedulingDashboard setAlert={setAlert} confirm={confirm} />
-        ) : activeView === 'analyze' ? (
-          <div className="pt-10">
-            <GlobalIntelligence reports={reports} />
-          </div>
         ) : activeView === 'learn' ? (
           <div className="pt-10 h-full">
             <LearningHubPage />
@@ -688,7 +683,7 @@ const ChatInterface = ({
                 return (
                   <motion.div key={msg._id || i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                     className="flex justify-start my-3">
-                    <div className="flex flex-col gap-1.5 max-w-md w-full">
+                    <div className="flex flex-col gap-1.5 max-w-xl w-full">
                       <div className="flex items-center gap-2 px-1">
                         <Bot size={13} className="text-indigo-600 dark:text-indigo-400" />
                         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 font-outfit">Sentinel QA Assistant</span>
@@ -751,54 +746,113 @@ const ChatInterface = ({
         {/* ── Live Crawling & Auditing Progress Card ── */}
         {isScanning && (
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-2xl bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-800 rounded-2xl p-5 md:p-6 shadow-md space-y-4 my-2"
+            initial={{ opacity: 0, y: 10, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            className="w-full max-w-2xl bg-white dark:bg-slate-900 border-2 border-indigo-500/30 dark:border-indigo-500/30 rounded-2xl p-5 md:p-6 shadow-xl space-y-4 my-3 relative overflow-hidden"
           >
-            <div className="flex items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-3">
-                <div className="size-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
-                  <Loader2 size={18} className="animate-spin" />
+            {/* Ambient Background Glow */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none -z-0" />
+
+            <div className="flex items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4 relative z-10">
+              <div className="flex items-center gap-3.5">
+                {/* Advanced Animated Crawler Radar Loading Icon */}
+                <div className="relative size-12 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/10">
+                  {/* Rotating Radar Ring */}
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+                    className="absolute inset-1 rounded-xl border border-indigo-500/40 border-t-indigo-500 border-r-transparent"
+                  />
+                  {/* Pulsing Core */}
+                  <motion.div
+                    animate={{ scale: [1, 1.25, 1], opacity: [0.7, 1, 0.7] }}
+                    transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+                    className="size-4 rounded-full bg-indigo-600 dark:bg-indigo-400 shadow-[0_0_12px_rgba(99,102,241,0.8)]"
+                  />
+                  <Globe size={18} className="text-white relative z-10" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-[10px] font-bold uppercase tracking-wider animate-pulse font-outfit">
-                      Autonomous Crawl Active
+                    <span className="px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/80 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 font-outfit">
+                      <span className="size-1.5 rounded-full bg-indigo-600 animate-ping" />
+                      Parallel Worker Crawler Active
                     </span>
-                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 font-mono">
-                      {globalScanProgress?.percent || 25}%
+                    <span className="text-sm font-black text-indigo-600 dark:text-indigo-400 font-mono">
+                      {globalScanProgress?.percent || 15}%
                     </span>
                   </div>
-                  <p className="text-sm font-bold text-slate-900 dark:text-white font-outfit mt-0.5">
-                    {globalScanProgress?.stage || 'Deep Crawling & Sensory Execution'}
+                  <p className="text-sm font-bold text-slate-900 dark:text-white font-outfit mt-1 flex items-center gap-2">
+                    {globalScanProgress?.stage || 'Crawling Pages & Running Diagnostic Services...'}
                   </p>
                 </div>
               </div>
-              <div className="px-3 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-800 text-[10px] font-mono font-bold text-indigo-700 dark:text-indigo-300 uppercase tracking-wider">
-                Status: IN_PROGRESS
+
+              <div className="hidden sm:flex flex-col items-end">
+                <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Execution Engine</span>
+                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 font-mono flex items-center gap-1 mt-0.5">
+                  <span className="size-2 rounded-full bg-emerald-500 animate-pulse" /> 4 Concurrent Workers
+                </span>
+              </div>
+            </div>
+
+            {/* Live Metrics Row */}
+            <div className="grid grid-cols-3 gap-2.5 py-1 relative z-10">
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/60 flex flex-col">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-outfit">Pages Crawled</span>
+                <span className="text-lg font-black text-slate-900 dark:text-white font-mono mt-0.5 flex items-center gap-1.5">
+                  <Globe size={14} className="text-indigo-600 dark:text-indigo-400" />
+                  {globalScanProgress?.pagesCrawled || 1}
+                </span>
+              </div>
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/60 flex flex-col">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-outfit">Issues Found</span>
+                <span className="text-lg font-black text-amber-600 dark:text-amber-400 font-mono mt-0.5 flex items-center gap-1.5">
+                  <AlertTriangle size={14} className="text-amber-500" />
+                  {globalScanProgress?.issuesFound || 0}
+                </span>
+              </div>
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/60 flex flex-col overflow-hidden">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-outfit truncate">Active Node</span>
+                <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 font-mono mt-1.5 truncate" title={globalScanProgress?.currentUrl || 'Seed URL'}>
+                  {globalScanProgress?.currentUrl ? (() => {
+                    try { return new URL(globalScanProgress.currentUrl).pathname || '/'; }
+                    catch(e) { return globalScanProgress.currentUrl; }
+                  })() : '/ (Root)'}
+                </span>
               </div>
             </div>
 
             {/* Dynamic Progress Bar */}
-            <div className="space-y-1.5">
-              <div className="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden relative">
+            <div className="space-y-1.5 relative z-10">
+              <div className="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden relative border border-slate-200 dark:border-slate-700">
                 <motion.div
-                  className="h-full bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-500 rounded-full"
+                  className="h-full bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-500 rounded-full relative"
                   initial={{ width: '15%' }}
-                  animate={{ width: `${Math.max(15, globalScanProgress?.percent || 25)}%` }}
-                  transition={{ duration: 0.5 }}
-                />
+                  animate={{ width: `${Math.max(15, globalScanProgress?.percent || 20)}%` }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                >
+                  <motion.div
+                    animate={{ x: ['-100%', '200%'] }}
+                    transition={{ duration: 1.8, repeat: Infinity, ease: 'linear' }}
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent w-full h-full"
+                  />
+                </motion.div>
               </div>
               <div className="flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-400 font-medium">
-                <span>Traversing DOM tree, internal links & API endpoints</span>
-                <span>Target: {chatMeta?.url ? (() => { try { return new URL(chatMeta.url).hostname; } catch(e) { return chatMeta.url; } })() : 'Autonomous Target'}</span>
+                <span className="flex items-center gap-1.5">
+                  <Loader2 size={11} className="animate-spin text-indigo-600" />
+                  Auditing internal nodes, API telemetry & visual layout
+                </span>
+                <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
+                  {globalScanProgress?.percent || 15}%
+                </span>
               </div>
             </div>
 
             {/* Active Sensors Status Badges */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 relative z-10">
               {[
-                { label: 'Universal Crawler', icon: <ExternalLink size={11} /> },
+                { label: 'Parallel Crawler', icon: <Globe size={11} /> },
                 { label: 'Form Fuzzer', icon: <FormInput size={11} /> },
                 { label: 'Secret Sniffer', icon: <Shield size={11} /> },
                 { label: 'Spatial Layout', icon: <Layout size={11} /> },
@@ -807,18 +861,18 @@ const ChatInterface = ({
                 { label: 'WCAG 2.1 A11y', icon: <UserCheck size={11} /> },
                 { label: 'Core Web Vitals', icon: <Zap size={11} /> }
               ].map((s, idx) => (
-                <div key={idx} className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center justify-between gap-1">
+                <div key={idx} className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex items-center justify-between gap-1 shadow-xs">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <span className="text-indigo-600 dark:text-indigo-400 shrink-0">{s.icon}</span>
                     <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200 truncate">{s.label}</span>
                   </div>
-                  <span className="size-1.5 rounded-full bg-indigo-600 animate-ping shrink-0" />
+                  <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
                 </div>
               ))}
             </div>
 
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 italic">
-              Discovered issues will automatically populate into your report dashboard and audit sensor badges.
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 italic relative z-10">
+              Discovered issues for each page are analyzed and mapped into your report dashboard in real-time.
             </p>
           </motion.div>
         )}

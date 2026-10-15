@@ -74,6 +74,31 @@ router.get('/thread/:chatId/messages', async (req, res) => {
                     try {
                         const report = await ScanReport.findById(msg.scanReportId).lean();
                         if (report) {
+                            const apiLeaks = (report.securityIssues || []).filter(s => 
+                                s.type === 'SERVER_STACK_TRACE_LEAK' || s.type === 'SENSITIVE_API_RESPONSE_FIELD' || s.testCaseId?.includes('SEC-STACK') || s.testCaseId?.includes('SEC-DATA')
+                            ).length;
+                            const netFails = (report.networkLogs?.filter(n => n.status >= 400) || []).length;
+                            const apiAndNet = netFails + apiLeaks;
+                            const secretSec = Math.max(0, (report.securityIssues?.length || 0) - apiLeaks);
+                            const ui = (report.uiIssues?.length || 0) + (report.responsiveIssues?.length || 0);
+                            const forms = report.formIssues?.length || 0;
+                            const consoleErr = report.consoleErrors?.length || 0;
+                            const links = report.brokenLinks?.length || 0;
+                            const a11y = report.accessibilityIssues?.length || 0;
+                            const total = apiAndNet + forms + ui + secretSec + consoleErr + links + a11y;
+
+                            const computedStats = report.stats?.totalIssues !== undefined ? report.stats : {
+                                totalIssues: total,
+                                networkIssues: apiAndNet,
+                                securityIssues: secretSec,
+                                uiIssues: ui,
+                                formIssues: forms,
+                                consoleErrors: consoleErr,
+                                brokenLinks: links,
+                                accessibilityIssues: a11y,
+                                pagesCrawled: report.pagesCrawled || 1
+                            };
+
                             msg.reportSummary = {
                                 ...msg.reportSummary,
                                 healthScore: report.healthScore ?? msg.reportSummary?.healthScore ?? 100,
@@ -83,16 +108,7 @@ router.get('/thread/:chatId/messages', async (req, res) => {
                                     bestPractices: report.lighthouseScores?.bestPractices ?? msg.reportSummary?.lighthouseScores?.bestPractices ?? 0,
                                     seo: report.lighthouseScores?.seo ?? msg.reportSummary?.lighthouseScores?.seo ?? 0
                                 },
-                                stats: {
-                                    brokenLinks: report.brokenLinks?.length || 0,
-                                    consoleErrors: report.consoleErrors?.length || 0,
-                                    accessibilityIssues: report.accessibilityIssues?.length || 0,
-                                    networkIssues: report.networkLogs?.length || 0,
-                                    securityIssues: report.securityIssues?.length || 0,
-                                    uiIssues: (report.uiIssues?.length || 0) + (report.responsiveIssues?.length || 0),
-                                    formIssues: report.formIssues?.length || 0,
-                                    pagesCrawled: report.pagesCrawled || 1
-                                }
+                                stats: computedStats
                             };
                         }
                     } catch (_) {}
@@ -120,6 +136,31 @@ router.get('/thread/:chatId/scans', async (req, res) => {
                 try {
                     const report = await ScanReport.findById(msg.scanReportId).lean();
                     if (report) {
+                        const apiLeaks = (report.securityIssues || []).filter(s => 
+                            s.type === 'SERVER_STACK_TRACE_LEAK' || s.type === 'SENSITIVE_API_RESPONSE_FIELD' || s.testCaseId?.includes('SEC-STACK') || s.testCaseId?.includes('SEC-DATA')
+                        ).length;
+                        const netFails = (report.networkLogs?.filter(n => n.status >= 400) || []).length;
+                        const apiAndNet = netFails + apiLeaks;
+                        const secretSec = Math.max(0, (report.securityIssues?.length || 0) - apiLeaks);
+                        const ui = (report.uiIssues?.length || 0) + (report.responsiveIssues?.length || 0);
+                        const forms = report.formIssues?.length || 0;
+                        const consoleErr = report.consoleErrors?.length || 0;
+                        const links = report.brokenLinks?.length || 0;
+                        const a11y = report.accessibilityIssues?.length || 0;
+                        const total = apiAndNet + forms + ui + secretSec + consoleErr + links + a11y;
+
+                        const computedStats = report.stats?.totalIssues !== undefined ? report.stats : {
+                            totalIssues: total,
+                            networkIssues: apiAndNet,
+                            securityIssues: secretSec,
+                            uiIssues: ui,
+                            formIssues: forms,
+                            consoleErrors: consoleErr,
+                            brokenLinks: links,
+                            accessibilityIssues: a11y,
+                            pagesCrawled: report.pagesCrawled || 1
+                        };
+
                         msg.reportSummary = {
                             ...msg.reportSummary,
                             healthScore: report.healthScore ?? msg.reportSummary?.healthScore ?? 100,
@@ -129,16 +170,7 @@ router.get('/thread/:chatId/scans', async (req, res) => {
                                 bestPractices: report.lighthouseScores?.bestPractices ?? 0,
                                 seo: report.lighthouseScores?.seo ?? 0
                             },
-                            stats: {
-                                brokenLinks: report.brokenLinks?.length || 0,
-                                consoleErrors: report.consoleErrors?.length || 0,
-                                accessibilityIssues: report.accessibilityIssues?.length || 0,
-                                networkIssues: report.networkLogs?.length || 0,
-                                securityIssues: report.securityIssues?.length || 0,
-                                uiIssues: (report.uiIssues?.length || 0) + (report.responsiveIssues?.length || 0),
-                                formIssues: report.formIssues?.length || 0,
-                                pagesCrawled: report.pagesCrawled || 1
-                            }
+                            stats: computedStats
                         };
                     }
                 } catch (_) {}

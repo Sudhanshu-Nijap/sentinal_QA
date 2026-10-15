@@ -27,7 +27,7 @@ async function runDedicatedScan(url, existingPort = null) {
 
             chrome = await chromeLauncher.launch({ 
                 chromePath: chromePath, 
-                startingPort: 9300, 
+                startingPort: 9300 + Math.floor(Math.random() * 400), 
                 chromeFlags: [
                     '--headless=new', // Modern headless mode for better WAF evasion
                     '--no-sandbox', 
@@ -40,8 +40,8 @@ async function runDedicatedScan(url, existingPort = null) {
                 ] 
             });
             port = chrome.port;
-            console.log(`[qaScanner]: Pulse Port Active: ${port}. Adaptive Stabilization (2.5s)...`);
-            await new Promise(res => setTimeout(res, 2500));
+            console.log(`[qaScanner]: Pulse Port Active: ${port}. Adaptive Stabilization (1.2s)...`);
+            await new Promise(res => setTimeout(res, 1200));
         }
 
         const result = await lighthouse(url, {

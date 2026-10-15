@@ -21,6 +21,7 @@ const messageSchema = new mongoose.Schema({
             seo: Number
         },
         stats: {
+            totalIssues: Number,
             brokenLinks: Number,
             consoleErrors: Number,
             accessibilityIssues: Number,

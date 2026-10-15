@@ -4,7 +4,7 @@ import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from
 import { Globe, Sparkles, ArrowRight, Loader2, Target, Calendar } from 'lucide-react';
 import axios from 'axios';
 
-const ScanForm = ({ onScanStarted }) => {
+const ScanForm = ({ onScanStarted, scanProgress }) => {
   const [url, setUrl] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,6 +18,8 @@ const ScanForm = ({ onScanStarted }) => {
     time: '12:00',
     dayOfWeek: 1
   });
+
+  const isScanningActive = loading || scanProgress?.status === 'in-progress';
 
 
   // Mouse tilt effect logic
@@ -152,12 +154,15 @@ const ScanForm = ({ onScanStarted }) => {
 
               <button 
                 type="submit"
-                disabled={loading}
-                className="bg-indigo-600 hover:bg-indigo-700 px-8 sm:px-10 h-14 sm:h-16 text-white rounded-xl sm:rounded-2xl transition-all active:scale-[0.98] font-bold tracking-wide text-sm disabled:opacity-50 w-full md:w-auto overflow-hidden group shadow-md shadow-indigo-600/20"
+                disabled={isScanningActive}
+                className="bg-indigo-600 hover:bg-indigo-700 px-8 sm:px-10 h-14 sm:h-16 text-white rounded-xl sm:rounded-2xl transition-all active:scale-[0.98] font-bold tracking-wide text-sm disabled:opacity-80 w-full md:w-auto overflow-hidden group shadow-md shadow-indigo-600/20"
               >
                 <div className="flex items-center justify-center gap-3 relative z-10">
-                  {loading ? (
-                    <Loader2 size={20} className="animate-spin" />
+                  {isScanningActive ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 size={18} className="animate-spin text-white" />
+                      <span>{scanProgress?.percent ? `Crawling (${scanProgress.percent}%)` : 'Crawling Pages...'}</span>
+                    </div>
                   ) : (
                     <>
                       <span>{showScheduling ? 'Confirm Schedule' : 'Start Autonomous Audit'}</span>
@@ -167,6 +172,66 @@ const ScanForm = ({ onScanStarted }) => {
                 </div>
               </button>
             </div>
+
+            {/* Live Crawling & Diagnostic Progress Card in ScanForm */}
+            <AnimatePresence>
+              {scanProgress && scanProgress.status === 'in-progress' && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                  animate={{ opacity: 1, height: 'auto', marginTop: 16 }}
+                  exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                  className="overflow-hidden border-t border-slate-100 dark:border-slate-800 pt-4"
+                >
+                  <div className="p-4 bg-indigo-50/70 dark:bg-slate-800/80 rounded-2xl border border-indigo-200/60 dark:border-indigo-800/60 flex flex-col gap-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="relative size-10 rounded-xl bg-indigo-600/10 dark:bg-indigo-400/10 border border-indigo-500/30 flex items-center justify-center shrink-0">
+                          <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 2.5, repeat: Infinity, ease: 'linear' }}
+                            className="absolute inset-0.5 rounded-lg border border-indigo-500 border-t-transparent"
+                          />
+                          <Globe size={16} className="text-indigo-600 dark:text-indigo-400" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-300 font-outfit">
+                              Parallel Workers Crawling Active
+                            </span>
+                            <span className="text-xs font-black font-mono text-indigo-600 dark:text-indigo-400">
+                              {scanProgress.percent || 15}%
+                            </span>
+                          </div>
+                          <p className="text-xs font-bold text-slate-800 dark:text-slate-200 font-outfit truncate max-w-sm sm:max-w-md">
+                            {scanProgress.stage || 'Crawling site pages and detecting issues...'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 text-right">
+                        <div>
+                          <div className="text-xs font-black text-slate-900 dark:text-white font-mono">
+                            {scanProgress.pagesCrawled || 1} Pages
+                          </div>
+                          <div className="text-[9px] font-bold text-amber-600 dark:text-amber-400 font-mono">
+                            {scanProgress.issuesFound || 0} Issues
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                      <motion.div
+                        className="h-full bg-gradient-to-r from-indigo-600 to-cyan-500 rounded-full"
+                        animate={{ width: `${Math.max(15, scanProgress.percent || 15)}%` }}
+                        transition={{ duration: 0.4 }}
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           <div className="mt-4 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
