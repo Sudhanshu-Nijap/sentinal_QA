@@ -35,15 +35,29 @@ const normalizeUrl = (rawUrl) => {
     }
 };
 
-// Helper: Deduplicate issue objects by a fingerprint string
+// Helper: Deduplicate issue objects by a fingerprint string and aggregate occurrences
 const prune = (arr, fingerprint) => {
-    const seen = new Set();
-    return (arr || []).filter(item => {
+    const map = new Map();
+    for (const item of (arr || [])) {
         const sig = fingerprint(item);
-        if (seen.has(sig)) return false;
-        seen.add(sig);
-        return true;
-    });
+        if (!map.has(sig)) {
+            map.set(sig, {
+                ...item,
+                _occurrences: 1,
+                _affectedLocations: [item.page || item.location || 'Primary View'].filter(Boolean)
+            });
+        } else {
+            const existing = map.get(sig);
+            existing._occurrences = (existing._occurrences || 1) + 1;
+            const loc = item.page || item.location;
+            if (loc && existing._affectedLocations && !existing._affectedLocations.includes(loc)) {
+                if (existing._affectedLocations.length < 15) {
+                    existing._affectedLocations.push(loc);
+                }
+            }
+        }
+    }
+    return Array.from(map.values());
 };
 
 /**
@@ -255,6 +269,7 @@ const crawlAndAuditWebsite = async (reportId, baseUrl, emitProgress, options = {
             const pageConsoleErrors = [];
             const pageNetworkLogs = [];
             const pageSecurityIssues = [];
+            const pageAccessibilityIssues = [];
             const pendingResponseAudits = [];
             let pageTotalSize = 0;
             let pageRequestCount = 0;
@@ -264,6 +279,9 @@ const crawlAndAuditWebsite = async (reportId, baseUrl, emitProgress, options = {
                 if (msg.type() === 'error') {
                     const text = msg.text();
                     if (text.includes('[HMR]') || text.includes('[WDS]') || text.includes('React DevTools')) return;
+                    // Do not log browser 404 resource loading errors as JavaScript runtime exceptions
+                    if (text.includes('Failed to load resource:') && text.includes('404')) return;
+
                     pageConsoleErrors.push({
                         page: pageUrl,
                         message: text.substring(0, 500),
@@ -299,14 +317,27 @@ const crawlAndAuditWebsite = async (reportId, baseUrl, emitProgress, options = {
                         if (status >= 400) {
                             const isNoise = ['google-analytics', 'googletagmanager', 'doubleclick', 'facebook.net', 'favicon.ico'].some(n => reqUrl.includes(n));
                             if (!isNoise) {
+                                const isPluginAsset = reqUrl.includes('/plugins/') || reqUrl.includes('/wp-content/plugins/') || reqUrl.includes('/modules/') || reqUrl.includes('revslider');
+                                let issueDesc = `HTTP ${status} on ${response.request().method()} ${reqUrl}`;
+                                let recDesc = status === 404 ? 'Asset or endpoint not found on server.' : 'Server or API endpoint returned error response.';
+                                let customSeverity = status >= 500 ? 'High' : 'Medium';
+
+                                if (isPluginAsset && status === 404) {
+                                    const fileName = reqUrl.split('/').pop().split('?')[0];
+                                    issueDesc = `Missing plugin asset (HTTP 404): ${fileName}`;
+                                    recDesc = 'The webpage template references a stylesheet or script from an uninstalled or inactive plugin. Remove the orphaned tag from the HTML layout to eliminate this 404 error and cut load latency.';
+                                    customSeverity = 'Low';
+                                }
+
                                 pageNetworkLogs.push({
                                     page: pageUrl,
                                     method: response.request().method(),
                                     url: reqUrl,
                                     status,
-                                    type: resourceType,
-                                    issue: `HTTP ${status} on ${response.request().method()} ${reqUrl}`,
-                                    recommendation: status === 404 ? 'Asset or endpoint not found.' : 'Server or API endpoint returned error response.'
+                                    type: isPluginAsset ? 'plugin_asset' : resourceType,
+                                    severity: customSeverity,
+                                    issue: issueDesc,
+                                    recommendation: recDesc
                                 });
 
                                 if (resourceType === 'fetch' || resourceType === 'xhr' || contentType.includes('application/json') || contentType.includes('text')) {
@@ -512,7 +543,7 @@ const crawlAndAuditWebsite = async (reportId, baseUrl, emitProgress, options = {
                                 type: 'SEO_STRUCTURAL',
                                 issue: 'Missing H1 heading tag',
                                 severity: 'Low',
-                                recommendation: 'Every page should have exactly one H1 heading for structure and indexing.'
+                                recommendation: 'Add a single primary <h1> heading to clearly identify the subject of this page for search engines and screen readers.'
                             });
                         }
                         document.querySelectorAll('img').forEach(img => {
@@ -520,15 +551,15 @@ const crawlAndAuditWebsite = async (reportId, baseUrl, emitProgress, options = {
                                 issues.push({
                                     type: 'UX_ACCESSIBILITY',
                                     issue: 'Image missing alternate text',
-                                    severity: 'High',
+                                    severity: 'Low',
                                     selector: img.src,
-                                    recommendation: 'Add descriptive alt text for screen readers (WCAG 1.1.1).'
+                                    recommendation: 'Add descriptive alt text to this <img> tag (WCAG 1.1.1), or alt="" if purely decorative, so screen readers can explain the graphic.'
                                 });
                             }
                         });
                         return issues;
                     });
-                    pageUiIssues = (structural || []).map(u => ({ ...u, page: pageUrl }));
+                    pageAccessibilityIssues.push(...(structural || []).map(u => ({ ...u, page: pageUrl })));
                 } catch (_) {}
             }
 
@@ -553,7 +584,8 @@ const crawlAndAuditWebsite = async (reportId, baseUrl, emitProgress, options = {
             allNetworkLogs.push(...pageNetworkLogs);
             allSecurityIssues.push(...pageSecurityIssues);
             allFormIssues.push(...pageFormIssues, ...pageFuzzIssues);
-            allUiIssues.push(...pageLayoutIssues, ...pageInteractionIssues, ...pageResponsiveIssues, ...pagePerfIssues, ...pageUiIssues);
+            allUiIssues.push(...pageLayoutIssues, ...pageInteractionIssues, ...pageResponsiveIssues, ...pagePerfIssues);
+            allAccessibilityIssues.push(...pageAccessibilityIssues);
             allResponsiveIssues.push(...pageResponsiveIssues);
             allStorageIssues.push(...pageStorageIssues);
             if (screenshotInfo) allScreenshots.push(screenshotInfo);
@@ -564,7 +596,7 @@ const crawlAndAuditWebsite = async (reportId, baseUrl, emitProgress, options = {
 
             const pageIssuesTotal = pageConsoleErrors.length + pageNetworkLogs.length + pageSecurityIssues.length +
                                    pageFormIssues.length + pageFuzzIssues.length + pageLayoutIssues.length +
-                                   pageInteractionIssues.length + pageResponsiveIssues.length + pagePerfIssues.length + pageUiIssues.length;
+                                   pageInteractionIssues.length + pageResponsiveIssues.length + pagePerfIssues.length + pageAccessibilityIssues.length;
 
             crawledPagesMeta.push({
                 url: pageUrl,
@@ -771,14 +803,14 @@ const crawlAndAuditWebsite = async (reportId, baseUrl, emitProgress, options = {
             issuesFound: allConsoleErrors.length + allNetworkLogs.length + allUiIssues.length + allFormIssues.length
         });
 
-        const finalConsole = prune(allConsoleErrors, c => `${c.message}|${c.location}|${c.page}`);
-        const finalNetwork = prune(allNetworkLogs, n => `${n.method}|${n.url}|${n.status}|${n.page}`);
-        const finalUI = prune(allUiIssues, u => `${u.type}|${u.issue}|${u.selector}|${u.page}`);
-        const finalResponsive = prune(allResponsiveIssues, r => `${r.issue}|${r.selector}|${r.page}`);
-        const finalForms = prune(allFormIssues, f => `${f.type}|${f.issue}|${f.selector || f.formName}|${f.page}`);
-        const finalSecurity = prune([...allSecurityIssues, ...allStorageIssues], s => `${s.type || s.issue}|${s.selector || s.link}|${s.page}`);
-        const finalBrokenLinks = prune(allBrokenLinks, b => `${b.link}|${b.page}`);
-        const finalAccessibility = prune(allAccessibilityIssues, a => `${a.issue}|${a.selector || a.element}|${a.page}`);
+        const finalConsole = prune(allConsoleErrors, c => `${c.message}|${c.location}`);
+        const finalNetwork = prune(allNetworkLogs, n => `${n.method}|${n.url}|${n.status}`);
+        const finalUI = prune(allUiIssues, u => `${u.type}|${u.issue}|${u.selector || ''}`);
+        const finalResponsive = prune(allResponsiveIssues, r => `${r.issue}|${r.selector || ''}`);
+        const finalForms = prune(allFormIssues, f => `${f.type}|${f.issue}|${f.selector || f.formName || ''}`);
+        const finalSecurity = prune([...allSecurityIssues, ...allStorageIssues], s => `${s.type || s.issue}|${s.selector || s.link || ''}`);
+        const finalBrokenLinks = prune(allBrokenLinks, b => `${b.link}`);
+        const finalAccessibility = prune(allAccessibilityIssues, a => `${a.issue}|${a.selector || a.element || ''}`);
 
         if (reportId) {
             await ScanReport.findByIdAndUpdate(reportId, {

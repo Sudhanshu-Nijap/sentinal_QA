@@ -156,10 +156,10 @@ const scanUI = async (page) => {
                 addIssue(img, { 
                     type: 'UX_ACCESSIBILITY', 
                     issue: 'Image missing alternate text', 
-                    severity: 'High', 
+                    severity: 'Low', 
                     selector: img.src,
-                    technicalImpact: 'Severe compliance failure (WCAG 2.1 - 1.1.1). Non-text content must have a text alternative for screen readers.',
-                    recommendation: 'Add alt=\"\" for decorative images or descriptive text for informational images.' 
+                    technicalImpact: 'Visually impaired visitors using screen readers cannot understand this image without descriptive text (WCAG 1.1.1). Also impacts SEO ranking.',
+                    recommendation: 'Add descriptive alt text to the <img> tag (e.g. alt="Organization Logo"), or alt="" if purely decorative.' 
                 });
             }
         });
@@ -300,6 +300,8 @@ const runSinglePageScan = async (reportId, url, scannedModules = [], emitProgres
             if (msg.type() === 'error') {
                 const text = msg.text();
                 if (text.includes('[HMR]') || text.includes('[WDS]') || text.includes('React DevTools')) return;
+                // Do not log browser 404 resource loading errors as JavaScript runtime exceptions
+                if (text.includes('Failed to load resource:') && text.includes('404')) return;
 
                 const errorLocation = msg.location().url || '';
                 rawConsole.push({
@@ -340,13 +342,27 @@ const runSinglePageScan = async (reportId, url, scannedModules = [], emitProgres
                     ].some(noise => reqUrl.includes(noise));
 
                     if (!isNoise) {
+                        const isPluginAsset = reqUrl.includes('/plugins/') || reqUrl.includes('/wp-content/plugins/') || reqUrl.includes('/modules/') || reqUrl.includes('revslider');
+                        let issueDesc = `HTTP ${status} on ${response.request().method()} ${reqUrl}`;
+                        let recDesc = status === 404 ? 'Asset or endpoint not found on server.' : 'Server or request failure.';
+                        let customSeverity = status >= 500 ? 'High' : 'Medium';
+
+                        if (isPluginAsset && status === 404) {
+                            const fileName = reqUrl.split('/').pop().split('?')[0];
+                            issueDesc = `Missing plugin asset (HTTP 404): ${fileName}`;
+                            recDesc = 'The webpage template references a stylesheet or script from an uninstalled or inactive plugin. Remove the orphaned tag from the HTML layout to eliminate this 404 error and cut load latency.';
+                            customSeverity = 'Low';
+                        }
+
                         rawNetwork.push({
                             page: url,
                             method: response.request().method(),
                             url: reqUrl,
                             status,
-                            type: resourceType,
-                            recommendation: status === 404 ? 'Asset or endpoint not found.' : 'Server or request failure.'
+                            type: isPluginAsset ? 'plugin_asset' : resourceType,
+                            severity: customSeverity,
+                            issue: issueDesc,
+                            recommendation: recDesc
                         });
 
                         // ── Advanced API Telemetry & Stack Trace Inspection ──

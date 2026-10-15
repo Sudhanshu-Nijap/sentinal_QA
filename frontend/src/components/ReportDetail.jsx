@@ -432,6 +432,40 @@ const IssueTable = ({ data, columns, setRemediationCode, onAskAI, reportId }) =>
       };
     }
 
+    // 1. Image Alt Text & Graphic Accessibility
+    const isImageAlt = (row.issue && (row.issue.includes('alt') || row.issue.includes('Image missing') || row.issue.includes('alternate text'))) ||
+                       (row.selector && typeof row.selector === 'string' && row.selector.match(/\.(jpeg|jpg|gif|png|webp|svg)/i) && (row.type?.includes('ACCESSIBILITY') || row.category === 'Accessibility'));
+    if (isImageAlt) {
+      return {
+        cause: "The HTML <img> tag for this graphic lacks a descriptive 'alt' attribute.",
+        impact: "Screen readers used by visually impaired visitors cannot convey what this image depicts. Missing alt text also degrades SEO image indexing.",
+        guide: row.recommendation || "Add an alt attribute describing the image (e.g. alt='Campus Front Entrance'), or alt='' if purely decorative."
+      };
+    }
+
+    // 2. Missing Primary H1 Tag
+    if (row.issue && (row.issue.includes('H1') || row.issue.includes('h1'))) {
+      return {
+        cause: "The webpage lacks a single primary <h1> heading element.",
+        impact: "Search engines and screen reader users cannot easily identify the primary topic and document hierarchy of the page.",
+        guide: row.recommendation || "Add a single <h1> heading near the top of the main content area (e.g. <h1>Page Title</h1>)."
+      };
+    }
+
+    // 3. Orphaned Plugin & Template Assets (HTTP 404)
+    const isPlugin404 = (row.type === 'plugin_asset') ||
+                        ((row.url || row.link || row.selector || '').includes('/plugin') && (row.status === 404 || (row.issue && row.issue.includes('404')))) ||
+                        ((row.url || row.link || '').includes('revslider'));
+    if (isPlugin404) {
+      const fileName = (row.url || row.link || row.selector || '').split('/').pop().split('?')[0] || 'plugin stylesheet';
+      return {
+        cause: `The HTML template requests an uninstalled or inactive plugin asset (${fileName}) that does not exist on the server.`,
+        impact: "Generates unnecessary 404 network errors on every single page load and adds loading latency. Not a code crash.",
+        guide: "Open your website's header or layout template and delete the orphaned <link> or <script> tag for this uninstalled plugin."
+      };
+    }
+
+    // 4. Security & Secret Leaks
     if (row.issue && (row.issue.includes('Leaked') || row.issue.includes('Secret') || row.issue.includes('Source Map') || row.issue.includes('Malicious'))) {
       return {
         cause: row.details || "Security credential or unminified asset exposed to public clients.",
@@ -439,6 +473,8 @@ const IssueTable = ({ data, columns, setRemediationCode, onAskAI, reportId }) =>
         guide: customGuide || "Rotate compromised credentials immediately and ensure keys are protected behind server environment variables."
       };
     }
+
+    // 5. Interactive Button & Dead Clicks
     if (row.type && (row.type.includes('DEAD_CLICK') || row.type.includes('CRASH_CLICK') || row.type.includes('ZOMBIE_API') || row.type.includes('CLICK_INTERCEPTION'))) {
       return {
         cause: customCause || "Interactive component failed to execute, dispatch handler, or was obscured by an overlay.",
@@ -446,6 +482,8 @@ const IssueTable = ({ data, columns, setRemediationCode, onAskAI, reportId }) =>
         guide: customGuide || "Verify event binding, z-index hierarchy, and ensure interactive elements receive unobstructed pointer events."
       };
     }
+
+    // 6. Form Validation & CSRF
     if (row.type && (row.type.includes('DOUBLE_SUBMIT') || row.type.includes('PLAINTEXT_PASSWORD') || row.type.includes('CSRF') || row.type.includes('VALIDATION'))) {
       return {
         cause: customCause || "Form validation or state submission gap identified.",
@@ -453,26 +491,40 @@ const IssueTable = ({ data, columns, setRemediationCode, onAskAI, reportId }) =>
         guide: customGuide || "Implement client-side validation constraints and debounce submit buttons on click."
       };
     }
-    if (row.method) return { // Network
-      cause: customCause || "High latency or structural fetch failure detected in network cluster.",
-      impact: customImpact || "Degraded page load performance and potential data synchronization loss.",
-      guide: customGuide || `Verify endpoint ${row.url} is optimized for global distribution and properly handled in frontend UI.`
-    };
-    if (row.type === 'error' || row.message) return { // Console
-      cause: customCause || "Runtime exception identified in the execution environment.",
-      impact: customImpact || "Potential catastrophic failure of interactive UI components.",
-      guide: customGuide || "Inspect call stack for unhandled promises or null-reference collisions in the source bundle."
-    };
-    if (row.severity) return { // A11y / Security
-      cause: customCause || "Structural non-compliance with global standards.",
-      impact: customImpact || row.issue || "Exclusion of users with assistive technological requirements or security risk.",
-      guide: customGuide || "Ensure ARIA landmarks, semantic contrasts, or headers meet modern web standards."
-    };
-    if (row.field || row.form) return { // Forms
+
+    // 7. General Network Errors
+    if (row.method || row.category === 'API & Network') {
+      const is404 = (row.status === 404 || (row.issue && row.issue.includes('404')));
+      return {
+        cause: customCause || (is404 ? "Requested file or API endpoint does not exist at this URL (HTTP 404)." : "Server or network request returned an error response."),
+        impact: customImpact || (is404 ? "Missing resource fails to render or API call returns empty data." : "Degraded page functionality and data synchronization loss."),
+        guide: customGuide || `Verify endpoint ${row.url || 'URL'} path on the server and check network routing.`
+      };
+    }
+
+    // 8. Console Runtime Errors
+    if (row.type === 'error' || row.message || row.category === 'Console') {
+      const msg = row.message || row.issue || '';
+      if (msg.includes('404') || msg.includes('Failed to load resource')) {
+        return {
+          cause: "The browser attempted to load an asset that returned HTTP 404 Not Found.",
+          impact: "The resource failed to load, which may affect visual styling or features relying on it.",
+          guide: "Verify the file path on the web server or remove the unused link tag from the template."
+        };
+      }
+      return {
+        cause: msg ? `JavaScript execution error: "${msg.substring(0, 160)}"` : "Unhandled script exception occurred in the browser runtime.",
+        impact: customImpact || "May stop dropdown menus, modals, or user interaction scripts from running on this page.",
+        guide: customGuide || "Inspect the call stack in browser developer tools to verify function and object existence before access."
+      };
+    }
+
+    if (row.field || row.form) return {
       cause: customCause || "Semantic or validation gap identified in the user interaction layer.",
       impact: customImpact || "Potential user frustration or failure to complete critical business flows.",
       guide: customGuide || `Review the ${row.field} field in ${row.form}. Ensure labels and validation constraints are correctly implemented.`
     };
+
     return {
       cause: customCause || "General deviation from optimized architectural standards.",
       impact: customImpact || row.issue || "Sub-optimal user experience and processing inefficiency.",
@@ -968,20 +1020,24 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
         selector: f.formSelector || f.form || "Input element",
         source: "Form Integrity Fuzzer"
       })),
-      ...(report.uiIssues || []).map((u, i) => ({
-        id: `ui-${i}`,
-        page: u.page || report.url,
-        title: u.issue || u.type || "UI/UX Layout Deviation",
-        issue: u.issue || u.observed || "Dead click, layout overflow, or touch target collision detected.",
-        reason: u.technicalImpact || u.rootCause || "Interactive element failed to trigger handler or overlaps viewport bounds.",
-        fix: u.stepsToReproduce || [u.recommendation || "Verify event binding and ensure pointer events."],
-        suggestedFix: u.suggestedFix || u.remediationCode || "",
-        severity: u.severity || "Medium",
-        testCaseId: u.testCaseId || `TC-UI-${i + 1}`,
-        category: "UI/UX",
-        selector: u.selector || "Viewport Element",
-        source: "Spatial Layout Auditor"
-      })),
+      ...(report.uiIssues || []).map((u, i) => {
+        const isImg = (u.issue && (u.issue.includes('alt') || u.issue.includes('Image'))) || (u.type && u.type.includes('ACCESSIBILITY'));
+        const isH1 = (u.issue && (u.issue.includes('H1') || u.issue.includes('h1'))) || (u.type && u.type.includes('SEO'));
+        return {
+          id: `ui-${i}`,
+          page: u.page || report.url,
+          title: isImg ? "Image Missing Alternate Text" : (isH1 ? "Missing Primary H1 Heading Tag" : (u.issue || u.type || "UI/UX Layout Deviation")),
+          issue: u.issue || u.observed || "Dead click, layout overflow, or touch target collision detected.",
+          reason: isImg ? "Screen readers cannot describe this image for visually impaired users. Missing alt text also hurts SEO ranking." : (isH1 ? "Every page requires an H1 heading for clear document hierarchy and search indexing." : (u.technicalImpact || u.rootCause || "Interactive element failed to trigger handler or overlaps viewport bounds.")),
+          fix: isImg ? ["Add descriptive alt text to the <img> tag, or alt='' if purely decorative."] : (isH1 ? ["Add a single descriptive <h1> heading near the top of the main content."] : (u.stepsToReproduce || [u.recommendation || "Verify event binding and ensure pointer events."])),
+          suggestedFix: u.suggestedFix || u.remediationCode || "",
+          severity: (isImg || isH1) ? "Low" : (u.severity || "Medium"),
+          testCaseId: u.testCaseId || `TC-UI-${i + 1}`,
+          category: (isImg || isH1) ? "Accessibility" : "UI/UX",
+          selector: u.selector || "Viewport Element",
+          source: "Spatial Layout Auditor"
+        };
+      }),
       ...(report.responsiveIssues || []).map((r, i) => ({
         id: `resp-${i}`,
         page: r.page || report.url,
@@ -1015,20 +1071,23 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
           source: isApiLeak ? "API & Network Sentry" : "Enterprise Secret Sniffer"
         };
       }),
-      ...(report.consoleErrors || []).map((c, i) => ({
-        id: `console-${i}`,
-        page: c.page || report.url,
-        title: "Runtime JavaScript Exception",
-        issue: c.message ? c.message.substring(0, 200) : "Uncaught browser exception captured.",
-        reason: "Client-side code crash or unhandled promise rejection.",
-        fix: [c.recommendation || "Inspect call stack for null-reference collision."],
-        suggestedFix: `try {\n  // Target execution block\n} catch (error) {\n  console.error("Safeguarded exception:", error);\n}`,
-        severity: "High",
-        testCaseId: `TC-JS-${i + 1}`,
-        category: "Console",
-        selector: c.location || "Inline Script",
-        source: "Console Runtime Traps"
-      })),
+      ...(report.consoleErrors || []).map((c, i) => {
+        const is404 = (c.message || '').includes('404') || (c.message || '').includes('Failed to load resource');
+        return {
+          id: `console-${i}`,
+          page: c.page || report.url,
+          title: is404 ? "Missing Resource (HTTP 404)" : "Runtime JavaScript Exception",
+          issue: c.message ? c.message.substring(0, 200) : "Uncaught browser exception captured.",
+          reason: is404 ? "Asset requested in HTML was not found on the server." : "Client-side code crash or unhandled promise rejection.",
+          fix: is404 ? ["Remove the orphaned resource reference from the HTML layout or restore the file."] : [c.recommendation || "Inspect call stack for null-reference collision or undefined function."],
+          suggestedFix: is404 ? `<!-- Remove orphaned link: -->\n<!-- <link rel="stylesheet" href="..."> -->` : `try {\n  // Target execution block\n} catch (error) {\n  console.error("Safeguarded exception:", error);\n}`,
+          severity: is404 ? "Low" : "High",
+          testCaseId: `TC-JS-${i + 1}`,
+          category: is404 ? "API & Network" : "Console",
+          selector: c.location || "Inline Script",
+          source: "Console Runtime Traps"
+        };
+      }),
       ...(report.brokenLinks || []).map((b, i) => ({
         id: `link-${i}`,
         page: b.page || report.url,
@@ -1043,34 +1102,42 @@ const ReportDetail = ({ reportId, onBack, onRefresh, onReScan, onDeleted, confir
         selector: b.link || "Anchor Href",
         source: "Navigation Link Graph"
       })),
-      ...(report.accessibilityIssues || []).map((a, i) => ({
-        id: `a11y-${i}`,
-        page: a.page || report.url,
-        title: a.issue || "ADA / WCAG Accessibility Violation",
-        issue: a.issue || "Missing ARIA landmarks or semantic markup violation.",
-        reason: "Interactive element not conforming to WCAG 2.1 accessibility criteria.",
-        fix: [a.recommendation || "Add proper aria-label, role, or form label attributes."],
-        suggestedFix: `<button aria-label="Action Button" type="submit">\n  <span>Click</span>\n</button>`,
-        severity: a.severity || "Medium",
-        testCaseId: `TC-A11Y-${i + 1}`,
-        category: "Accessibility",
-        selector: a.element || "DOM Element",
-        source: "WCAG Accessibility Sentinel"
-      })),
-      ...(report.networkLogs?.filter(n => n.status >= 400) || []).map((n, i) => ({
-        id: `net-${i}`,
-        page: n.page || report.url,
-        title: `Failed Network API Request (${n.status} ${n.method || 'GET'})`,
-        issue: `${n.method || 'GET'} request to ${n.url} failed with status ${n.status}.`,
-        reason: n.failureReason || "Endpoint unreachable, CORS blocked, or server returned 4xx/5xx error.",
-        fix: ["Verify server endpoint status, routing, and CORS configuration headers."],
-        suggestedFix: `// Check endpoint handler for ${n.url}`,
-        severity: n.status >= 500 ? "High" : "Medium",
-        testCaseId: `TC-NET-${i + 1}`,
-        category: "API & Network",
-        selector: n.url,
-        source: "API & Network Sentry"
-      }))
+      ...(report.accessibilityIssues || []).map((a, i) => {
+        const isImg = (a.issue && (a.issue.includes('alt') || a.issue.includes('Image'))) || (a.type && a.type.includes('ACCESSIBILITY'));
+        const isH1 = (a.issue && (a.issue.includes('H1') || a.issue.includes('h1'))) || (a.type && a.type.includes('SEO'));
+        return {
+          id: `a11y-${i}`,
+          page: a.page || report.url,
+          title: isImg ? "Image Missing Alternate Text (WCAG 1.1.1)" : (isH1 ? "Missing Primary H1 Heading Tag" : (a.issue || "ADA / WCAG Accessibility Violation")),
+          issue: a.issue || "Missing ARIA landmarks or semantic markup violation.",
+          reason: isImg ? "Screen readers cannot describe this image for visually impaired users." : (isH1 ? "Every page requires an H1 heading for clear document hierarchy and search indexing." : (a.technicalImpact || "Interactive element not conforming to WCAG 2.1 accessibility criteria.")),
+          fix: isImg ? ["Add descriptive alt text to the <img> tag, or alt='' if purely decorative."] : (isH1 ? ["Add a single descriptive <h1> heading near the top of the main content."] : [a.recommendation || "Add proper aria-label, role, or form label attributes."]),
+          suggestedFix: isImg ? `<img src="${a.selector || '/image.png'}" alt="Descriptive image text" />` : (isH1 ? `<h1>Main Page Title</h1>` : `<button aria-label="Action Button" type="submit">\n  <span>Click</span>\n</button>`),
+          severity: (isImg || isH1) ? "Low" : (a.severity || "Medium"),
+          testCaseId: `TC-A11Y-${i + 1}`,
+          category: "Accessibility",
+          selector: a.selector || a.element || "DOM Element",
+          source: "WCAG Accessibility Sentinel"
+        };
+      }),
+      ...(report.networkLogs?.filter(n => n.status >= 400) || []).map((n, i) => {
+        const isPlugin = (n.type === 'plugin_asset') || ((n.url || '').includes('/plugin') || (n.url || '').includes('revslider'));
+        const fileName = (n.url || '').split('/').pop().split('?')[0];
+        return {
+          id: `net-${i}`,
+          page: n.page || report.url,
+          title: (isPlugin && n.status === 404) ? `Missing Plugin Asset (${fileName})` : `Failed Network API Request (${n.status} ${n.method || 'GET'})`,
+          issue: n.issue || `${n.method || 'GET'} request to ${n.url} failed with status ${n.status}.`,
+          reason: (isPlugin && n.status === 404) ? "The HTML template requests an uninstalled plugin asset that does not exist on the server." : (n.failureReason || "Endpoint unreachable, CORS blocked, or server returned 4xx/5xx error."),
+          fix: (isPlugin && n.status === 404) ? ["Open your header template and delete the orphaned <link> or <script> tag for this uninstalled plugin."] : ["Verify server endpoint status, routing, and CORS configuration headers."],
+          suggestedFix: (isPlugin && n.status === 404) ? `<!-- Remove from HTML template: -->\n<!-- <link rel="stylesheet" href="${n.url}"> -->` : `// Check endpoint handler for ${n.url}`,
+          severity: (isPlugin && n.status === 404) ? "Low" : (n.status >= 500 ? "High" : "Medium"),
+          testCaseId: `TC-NET-${i + 1}`,
+          category: isPlugin ? "API & Network" : "API & Network",
+          selector: n.url,
+          source: "API & Network Sentry"
+        };
+      })
     ];
 
     if (sensorIssues.length === 0) return directIssues;
