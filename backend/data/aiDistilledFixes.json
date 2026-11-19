@@ -118,5 +118,11 @@
     "fixSummary": "Hello! I am **Sentinel AI**, your Principal QA Lead and Web Architect. I completely understand your confusion—seeing a list of errors about plugins or images can feel confusing, especially when the site seems to load fine on the surface. \n\nLet me break down these exact issues in very simple, plain English so you can see why our audit flagged them and how we can easily fix them together.\n\n---\n\n### 1. What's going on with the \"Plugin 404 Errors\"?\n\nYou noticed errors like this popping up across you",
     "timestamp": "2026-10-15T04:51:33.649Z",
     "status": "pending-review"
+  },
+  {
+    "query": "Analyze this finding from the report: [2026-10-15T05:27:51.121Z]  @firebase/firestore: Firestore (12.6.0): Uncaught Error in snapshot listener: FirebaseError: [code=permission-denied]: Missing or insufficient permissions.",
+    "fixSummary": "## Sentinel AI Diagnostic Report: Firebase Permission-Denied Error\n\n### What This Issue Means\nImagine walking up to a secure filing cabinet that you're technically allowed to look at, but when you open a drawer, a guard stops you because your visitor badge hasn't been properly verified yet. \n\nIn technical terms, the Guestbook page (`/guestbook`) on your site is trying to listen for real-time updates from your Firebase database using a \"snapshot listener.\" However, Firebase's security rules are b",
+    "timestamp": "2026-10-15T05:41:45.068Z",
+    "status": "pending-review"
   }
 ]
