@@ -1,3 +1,10 @@
+const dns = require('dns');
+try {
+    dns.setServers(['8.8.8.8', '1.1.1.1']);
+} catch (e) {
+    // Keep system DNS if override fails
+}
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
